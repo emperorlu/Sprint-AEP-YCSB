@@ -26,8 +26,8 @@ find_last_set_64(uint64_t val)
     return 64 - __builtin_clzll(val) - 1;
 }
 
-inline uint64_t get_now_micros(){
-        struct timeval tv;
-        gettimeofday(&tv, NULL);
-        return (tv.tv_sec) * 1000000 + tv.tv_usec;
-}
+// inline uint64_t get_now_micros(){
+//         struct timeval tv;
+//         gettimeofday(&tv, NULL);
+//         return (tv.tv_sec) * 1000000 + tv.tv_usec;
+// }
