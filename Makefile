@@ -1,6 +1,6 @@
 
 CC=g++
-CFLAGS=-std=c++11 -g  -pthread -I./ 
+CFLAGS=-std=c++11 -g -w -pthread -I./ 
 # LDFLAGS= -lpthread -lscaledkv -pthread -lpmemobj -lpmem
 LDFLAGS = -pthread -lpmemobj -lpmem
 SUBDIRS= core sys db
