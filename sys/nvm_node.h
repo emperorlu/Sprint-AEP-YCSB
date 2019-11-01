@@ -5,7 +5,7 @@
 #include <cassert>
 
 #include "libpmem.h"
-#include "random.h"
+// #include "random.h"
 
 namespace rocksdb {
     struct Node {
