@@ -163,7 +163,7 @@ class CONRangChain
         myList = vector<list<entry_key_t> >(listSize);
         maxhot = 30;
         minhot = 0;
-        maxSize = 1000000;
+        maxSize = 10000000;
         currentSize = 0;
     }
 
@@ -334,6 +334,9 @@ class btree{
     void chain_insert(entry_key_t key);
     void btree_updakey(const string key);
     vector<string> btree_back(int hot, size_t read);
+    int cache_size(){
+      return Cache->getSize();
+    }
 
     friend class bpnode;
 
