@@ -1,0 +1,85 @@
+System run!
+[SIZE] FLUSH_SIZE: 2000000
+[SIZE] OUT_SIZE: 12000000
+[SIZE] OUT_DATA: 200000
+[SIZE] READ_DATA: 200000
+NVMAllocator: map at 0x7f1480000000 
+NVMAllocator: map at 0x7f0a40000000 
+NVMAllocator: map at 0x7f0780000000 
+NVMAllocator: map at 0x7efd40000000 
+NVMAllocator: map at 0x7efa80000000 
+NVMAllocator: map at 0x7ef040000000 
+NVMAllocator: map at 0x7eed80000000 
+NVMAllocator: map at 0x7ee340000000 
+PersistentAllocator: map at 0x7ede00000000 
+PersistentAllocator: map at 0x7ed8c0000000 
+PersistentAllocator: map at 0x7ed380000000 
+---- dbname:aepsystem  dbpath:/home/lk/ceshi ----
+dbname:aepsystem
+dboption:0
+dbpath:/home/lk/ceshi
+dbstatistics:true
+dbwaitforbalance:false
+fieldcount:1
+fieldlength:1024
+insertproportion:0
+load:true
+morerun:
+operationcount:20000000
+readallfields:true
+readproportion:1
+recordcount:20000000
+requestdistribution:zipfian
+run:true
+scanproportion:0
+threadcount:1
+updateproportion:0
+workload:com.yahoo.ycsb.workloads.CoreWorkload
+----------------------------------------
+********** load result **********
+loading records:20000000  use time:268.346 s  IOPS:74530.62 iops
+*********************************
+********** run result **********
+all opeartion records:20000000  use time:56.868 s  IOPS:351690.72 iops
+
+read ops  :20000000  use time: 56.314 s  IOPS:355152.60 iops
+********************************
+-------------- db statistics --------------
+read not found:0
+-------------------------------------------
+[NUM] out_num: 11
+[NUM] cache_num: 0
+[NUM] flush_num: 16
+
+[SIZE] current_size: 11700425
+[SIZE] flush_size: 425
+[SIZE] FLUSH_SIZE: 2000000
+[SIZE] OUT_SIZE: 12000000
+[SIZE] OUT_DATA: 200000
+[SIZE] READ_DATA: 200000
+[SIZE] cache1_size: 0
+[SIZE] cache2_size: 0
+[SIZE] cache3_size: 0
+
+[GET] not_find: 0
+[GET] dram_find: 12700296
+[GET] nvm_find: 2808310
+[GET] nvm1_find: 878700
+[GET] nvm2_find: 803587
+[GET] nvm3_find: 1126023
+[GET] nvm0_find: 4491394
+
+[COUNT] insert_count: 20000000
+[COUNT] get_count: 20000000
+[COUNT] update_num1: 1100000
+
+[time] nvm1_itime: 18.8025
+[time] nvm2_itime: 18.4834
+[time] nvm3_itime: 29.0972
+[time] nvm1_gtime: 0.945133
+[time] nvm2_gtime: 0.911722
+[time] nvm3_gtime: 1.79204
+[time] nvm1_ctime: 0
+[time] nvm2_ctime: 0
+[time] nvm3_ctime: 0
+
