@@ -11,8 +11,8 @@
 #include <mutex>
 #include "nvm_common2.h"
 #include "test_common.h"
-// #include "random.h"
-// #include "persistent_BPlusTree_Wrapper.h"
+#include "random.h"
+#include "persistent_BPlusTree_Wrapper.h"
 #include "drnvm_BPlusTree_Wrapper.h"
 #include "statistic.h"
 #include <mutex>
@@ -57,6 +57,7 @@ namespace rocksdb{
     string Get(const std::string& key);
 
    int is_cache;
+   int num_size;
     
  private:
     size_t KEY_SIZE = rocksdb::NVM_KeySize;         
