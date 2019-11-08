@@ -15,7 +15,7 @@ namespace ycsbc {
         SetOptions(props);
         // aepsystem::AllocatorInit();
         
-        db_ = new rocksdb::aepsystem();
+        db_ = new rocksdb::aepsystem(1, 20);
         if(!db_) {
             printf("creat AepSystem error\n");
             // AllocatorExit();

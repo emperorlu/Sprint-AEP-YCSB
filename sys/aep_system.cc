@@ -72,12 +72,20 @@ int nvm0_find = 0;
 int workload = 0;
 
 int cache_num = 0;
+int cache1_num = 0;
+int cache2_num = 0;
+int cache3_num = 0;
+
 int flush_num = 0;
 int out_num = 0;
 
 int cache_find = 0;
 
 int update_num1 = 0;
+
+size_t out1_size = 0;
+size_t out2_size = 0;
+size_t out3_size = 0;
 
 size_t cache1_size = 0;
 size_t cache2_size = 0;
@@ -125,6 +133,7 @@ void* Data_out(void *arg)
             size_t out = OUT_DATA;
             // dram_bptree1->CreateChain();
             outData = dram_bptree1->OutdeData(out);
+            out1_size += outData.size();
             // cout << "outData.size(): " << outData.size() << endl;
             if(outData.size()!=0){
                 for(int i=0;i<outData.size();i++){
@@ -133,11 +142,16 @@ void* Data_out(void *arg)
                     current_size--;
                 }
             }
-            update_num1 += updakey1.size();
+            for(int i=0;i<updakey1.size();i++){
+                bptree_nvm1->Updakey(updakey1[i]);
+            }
+            updakey1.clear();
+            
 
             vector<string> outData2;
             // dram_bptree2->CreateChain();
             outData2 = dram_bptree2->OutdeData(out);
+            out2_size += outData2.size();
             if(outData2.size()!=0){
                 for(int i=0;i<outData2.size();i++){
                     dram_bptree2->Delete(outData2[i]);
@@ -145,10 +159,15 @@ void* Data_out(void *arg)
                     current_size--;
                 }
             }
+            for(int i=0;i<updakey2.size();i++){
+                bptree_nvm2->Updakey(updakey2[i]);
+            }
+            updakey2.clear();
 
             vector<string> outData3;
             // dram_bptree3->CreateChain();
             outData3 = dram_bptree3->OutdeData(out);
+            out3_size += outData3.size();
             if(outData3.size()!=0){
                 for(int i=0;i<outData3.size();i++){
                     dram_bptree3->Delete(outData3[i]);
@@ -156,6 +175,10 @@ void* Data_out(void *arg)
                     current_size--;
                 }
             }
+            for(int i=0;i<updakey3.size();i++){
+                bptree_nvm3->Updakey(updakey3[i]);
+            }
+            updakey3.clear();
             flush_size = current_size;
             m_mutex.unlock();
         }
@@ -172,6 +195,7 @@ void Read_Cache()     //预取
     //aep1
     // bptree_nvm1->CreateChain();
     if (bptree_nvm1->GetCacheSzie() != 0){
+        cache1_num++;
         vector<string> backData1;
         // gettimeofday(&be1, NULL);
         backData1 = bptree_nvm1->BacktoDram(dram_bptree1->MinHot(), read);
@@ -186,6 +210,7 @@ void Read_Cache()     //预取
                 gettimeofday(&en1, NULL);
                 nvm1_ctime += (en1.tv_sec-be1.tv_sec) + (en1.tv_usec-be1.tv_usec)/1000000.0;
                 dram_bptree1->Insert(backData1[i], tmp1);
+                current_size++;
             }
         }
         backData1.clear();
@@ -195,6 +220,7 @@ void Read_Cache()     //预取
     //aep2   
     // bptree_nvm2->CreateChain();
     if (bptree_nvm2->GetCacheSzie() != 0){
+        cache2_num++;
         vector<string> backData2;
         // gettimeofday(&be1, NULL);
         backData2 = bptree_nvm2->BacktoDram(dram_bptree2->MinHot(), read);
@@ -209,6 +235,7 @@ void Read_Cache()     //预取
                 gettimeofday(&en1, NULL);
                 nvm2_ctime += (en1.tv_sec-be1.tv_sec) + (en1.tv_usec-be1.tv_usec)/1000000.0;
                 dram_bptree2->Insert(backData2[i], tmp2);
+                current_size++;
             }
         }
         backData2.clear();
@@ -218,6 +245,7 @@ void Read_Cache()     //预取
     //aep3
     // bptree_nvm3->CreateChain();
     if (bptree_nvm3->GetCacheSzie() != 0){
+        cache3_num++;
         vector<string> backData3;
         // gettimeofday(&be1, NULL);
         backData3 = bptree_nvm3->BacktoDram(dram_bptree3->MinHot(), read);
@@ -232,6 +260,7 @@ void Read_Cache()     //预取
                 gettimeofday(&en1, NULL);
                 nvm3_ctime += (en1.tv_sec-be1.tv_sec) + (en1.tv_usec-be1.tv_usec)/1000000.0;
                 dram_bptree3->Insert(backData3[i], tmp3);
+                current_size++;
             }
         }
         backData3.clear();
@@ -256,12 +285,12 @@ void Write_Log()    //倒盘
         // bptree_nvm1->Insert(char8toint64(insertData1[i].c_str()), dram_bptree1->Get(insertData1[i]));
     }
     // cout << "update size: " << updakey1.size() << endl;
-    for(int i=0;i<updakey1.size();i++){
-        bptree_nvm1->Updakey(updakey1[i]);
-    }
+    // for(int i=0;i<updakey1.size();i++){
+    //     bptree_nvm1->Updakey(updakey1[i]);
+    // }
     gettimeofday(&en1, NULL);
     nvm1_itime += (en1.tv_sec-be1.tv_sec) + (en1.tv_usec-be1.tv_usec)/1000000.0;
-    updakey1.clear(); 
+    // updakey1.clear(); 
 
     //aep2
     vector<string> insertData2;
@@ -492,6 +521,7 @@ void aepsystem::Delete(const std::string& key)
 
 aepsystem::aepsystem(){
     is_cache = 0;
+    cache_size = 1;
     buf_size = KEY_SIZE + VALUE_SIZE + 1;
     // one = buf_size;
 }
@@ -511,10 +541,11 @@ void aepsystem::Initialize()
     
     // bptree_nvm0 = new rocksdb::NVM_BPlusTree_Wrapper();
     // bptree_nvm0->Initialize(PATH0, NVM_SIZE, VALUEPATH0, NVM_VALUE_SIZE, 10, KEY_SIZE, buf_size);
-    OUT_SIZE = 15000000 * 0.6;
+    OUT_SIZE = 20000000 * 0.6;
     FLUSH_SIZE = OUT_SIZE / 6;
     OUT_DATA = OUT_SIZE / 60;
-    READ_DATA = OUT_DATA;
+    READ_DATA = OUT_DATA / 10;
+    READ_DATA = READ_DATA * cache_size;
     cout << "System run!" << endl;
     cout << "[SIZE] FLUSH_SIZE: " << FLUSH_SIZE << endl;
     cout << "[SIZE] OUT_SIZE: " << OUT_SIZE << endl;
@@ -551,7 +582,13 @@ void aepsystem::End()
     stop = 0;
     cout << "[NUM] out_num: " << out_num << endl;
     cout << "[NUM] cache_num: " << cache_num << endl;
+    cout << "[NUM] cache1_num: " << cache1_num << endl;
+    cout << "[NUM] cache2_num: " << cache2_num << endl;
+    cout << "[NUM] cache3_num: " << cache3_num << endl;
     cout << "[NUM] flush_num: " << flush_num << endl;
+    cout << "[NUM] out1_size: " << out1_size << endl;
+    cout << "[NUM] out2_size: " << out2_size << endl;
+    cout << "[NUM] out3_size: " << out3_size << endl;
     cout << endl;
     cout << "[SIZE] current_size: " << current_size << endl;
     cout << "[SIZE] flush_size: " << flush_size << endl;
