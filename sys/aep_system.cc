@@ -31,9 +31,11 @@ vector<string> updakey2;
 vector<string> updakey3;
 
 //大小参数
+const size_t NVM_SIZE0 = 5 * (1ULL << 30);               // 45GB
+const size_t NVM_VALUE_SIZE0 = 20 * (1ULL << 30);         // 180GB
 const size_t NVM_SIZE = 10 * (1ULL << 30);               // 45GB
-const size_t NVM_VALUE_SIZE = 40 * (1ULL << 30);         // 180GB
-const size_t CACHE_SIZE = 20 * (1ULL << 30);         // 180GB
+const size_t NVM_VALUE_SIZE = 100 * (1ULL << 30);         // 180GB
+const size_t CACHE_SIZE = 30 * (1ULL << 30);         // 180GB
 
 //阈值
 size_t OUT_DATA = 0;
@@ -553,7 +555,7 @@ void aepsystem::Initialize()
     cout << "[SIZE] READ_DATA: " << READ_DATA << endl;
 
     bptree_nvm0= new NVMBtree();
-    bptree_nvm0->Initial(PATH0, NVM_SIZE, VALUEPATH0, NVM_VALUE_SIZE);
+    bptree_nvm0->Initial(PATH0, NVM_SIZE0, VALUEPATH0, NVM_VALUE_SIZE0);
     bptree_nvm1= new NVMBtree();
     bptree_nvm1->Initial(PATH1, NVM_SIZE, VALUEPATH1, NVM_VALUE_SIZE);
     bptree_nvm2= new NVMBtree();

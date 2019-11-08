@@ -17,3 +17,4 @@ numactl --cpunodebind=1 --membind=1 ./ycsbc -db aepsystem -dbpath /home/lk/ceshi
 
 ./rmsh
 
+
