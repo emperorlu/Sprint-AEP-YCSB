@@ -44,7 +44,7 @@ namespace rocksdb{
     class aepsystem{
  public:
     aepsystem();
-    aepsystem(int isc, int caches):is_cache(isc), cache_size(caches) {}
+   //  aepsystem(int isc, int caches):is_cache(isc), cache_size(caches) {}
     ~aepsystem();
 
     void Initialize();
