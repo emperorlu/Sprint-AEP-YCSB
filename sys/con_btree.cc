@@ -158,7 +158,7 @@ vector<string> btree::btree_back(int hot, size_t read){
       fillchar8wirhint64(tmp, (*itr).key);
       string str(tmp, 8);
       memcpy(keybuf, str.c_str(), str.size());
-      memcpy(keybuf + NVM_KeySize, '0', NVM_PointSize);
+      // memcpy(keybuf + NVM_KeySize, '0', NVM_PointSize);
       snprintf(sign, sizeof(sign), "%07d", (*itr).hot);
       string signdata(sign, NVM_SignSize);
       memcpy(keybuf + NVM_KeySize + NVM_PointSize, signdata.c_str(), NVM_SignSize);
