@@ -592,17 +592,18 @@ void BpTree::Insert(string key, string value, int cache)
         snprintf(sign, sizeof(sign), "%07d", 1000000);
         string signdata(sign, NVM_SignSize);
         memcpy(keybuf + NVM_KeySize + NVM_PointSize, signdata.c_str(), NVM_SignSize);
-        string tmp_key(keybuf, NVM_KeyBuf);
+        // string tmp_key(keybuf, NVM_KeyBuf);
     }else{
         memcpy(keybuf, key.c_str(), key.size());
         pmem_memcpy_persist(pvalue, value.c_str(), value.size());
         memcpy(key + NVM_KeySize, &vpoint, NVM_PointSize);
-        string tmp_key(keybuf, NVM_KeyBuf);
-        cout << "tmp_key: " << tmp_key << endl;
+        // string tmp_key(keybuf, NVM_KeyBuf);
+        // cout << "tmp_key: " << tmp_key << endl;
     }
     
+    string tmp_key(keybuf, NVM_KeyBuf);
 
-    // cout << "tmp_key: " << tmp_key << endl;
+    cout << "cache:" << cache << " tmp_key: " << tmp_key << endl;
     // InsertChain(tmp_key);
 
     if(m_root == nullptr)
