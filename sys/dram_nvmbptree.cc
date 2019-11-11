@@ -596,7 +596,7 @@ void BpTree::Insert(string key, string value, int cache)
     }else{
         memcpy(keybuf, key.c_str(), key.size());
         pmem_memcpy_persist(pvalue, value.c_str(), value.size());
-        memcpy(key + NVM_KeySize, &vpoint, NVM_PointSize);
+        memcpy(keybuf + NVM_KeySize, &vpoint, NVM_PointSize);
         // string tmp_key(keybuf, NVM_KeyBuf);
         // cout << "tmp_key: " << tmp_key << endl;
     }
