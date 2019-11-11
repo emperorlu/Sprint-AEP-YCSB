@@ -353,7 +353,6 @@ void aepsystem::Insert(const string &key, const string &value)
             flush_num++;
             flush_size = 0;//重新计数
             Write_Log();
-            cout << "insert_count:" << insert_count << endl;
         }
         switch (id)
         { 
