@@ -147,7 +147,6 @@ vector<string> btree::btree_back(int hot, size_t read){
   // cout << "HC size: " << HCrchain->currentSize << endl;
   for(int i = HCrchain->theLists.size()-1; i >= 0; i--)
   {
-    cout << "back i:" << i << endl;
     typename list<entry_key_t>::iterator itr = HCrchain->theLists[i].begin();
     while(itr != HCrchain->theLists[i].end()){
       if((*itr).hot < hot){
@@ -179,7 +178,6 @@ vector<string> btree::btree_back(int hot, size_t read){
       itr++;
     }
   }
-  cout << "return back" << endl;
   return dlist;
 }
 

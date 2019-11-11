@@ -200,9 +200,7 @@ void Read_Cache()     //预取
         cache1_num++;
         vector<string> backData1;
         // gettimeofday(&be1, NULL);
-        cout << "[DEBUG] BacktoDram1 begin!" << endl;
         backData1 = bptree_nvm1->BacktoDram(dram_bptree1->MinHot(), read);
-        cout << "[DEBUG] BacktoDram1 over!" << endl;
         // gettimeofday(&en1, NULL);
         // nvm1_time += (en1.tv_sec-be1.tv_sec) + (en1.tv_usec-be1.tv_usec)/1000000.0;
         // cout << "size1: " << backData1.size();
