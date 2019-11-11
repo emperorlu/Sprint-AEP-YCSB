@@ -193,7 +193,7 @@ void Read_Cache()     //预取
 {     
     cache_num++;
     size_t read = READ_DATA;
-    // cout << "[DEBUG] Read Cache!" << endl;
+    cout << "[DEBUG] Read Cache!" << endl;
     //aep1
     // bptree_nvm1->CreateChain();
     if (bptree_nvm1->GetCacheSzie() != 0){
@@ -543,7 +543,7 @@ void aepsystem::Initialize()
     
     // bptree_nvm0 = new rocksdb::NVM_BPlusTree_Wrapper();
     // bptree_nvm0->Initialize(PATH0, NVM_SIZE, VALUEPATH0, NVM_VALUE_SIZE, 10, KEY_SIZE, buf_size);
-    OUT_SIZE = 2500000 * 0.6;
+    OUT_SIZE = 1000000 * 0.6;
     FLUSH_SIZE = OUT_SIZE / 6;
     OUT_DATA = OUT_SIZE / 60;
     READ_DATA = OUT_DATA;
