@@ -128,7 +128,7 @@ void* Data_out(void *arg)
             
             // std::lock_guard<std::mutex> lk(m_mutex);
             m_mutex.lock();
-            cout << "[DEBUG] Begin out data!" << endl;
+            // cout << "[DEBUG] Begin out data!" << endl;
             // cout << "[DEBUG] current_size:" << current_size << endl;
             out_num++;
             vector<string> outData;
@@ -193,7 +193,7 @@ void Read_Cache()     //预取
 {     
     cache_num++;
     size_t read = READ_DATA;
-    cout << "[DEBUG] Read Cache!" << endl;
+    // cout << "[DEBUG] Read Cache!" << endl;
     //aep1
     // bptree_nvm1->CreateChain();
     if (bptree_nvm1->GetCacheSzie() != 0){
@@ -205,7 +205,6 @@ void Read_Cache()     //预取
         // nvm1_time += (en1.tv_sec-be1.tv_sec) + (en1.tv_usec-be1.tv_usec)/1000000.0;
         // cout << "size1: " << backData1.size();
         cache1_size += backData1.size();
-        cout << "[DEBUG] Insert cache1 size:" << cache1_size << endl;
         if(backData1.size()!=0){
             for(int i=0;i<backData1.size();i++){
                 gettimeofday(&be1, NULL);
@@ -216,7 +215,6 @@ void Read_Cache()     //预取
                 current_size++;
             }
         }
-        cout << "[DEBUG] Insert cache1 over!" << endl;
         backData1.clear();
     }
 
@@ -227,14 +225,11 @@ void Read_Cache()     //预取
         cache2_num++;
         vector<string> backData2;
         // gettimeofday(&be1, NULL);
-        cout << "[DEBUG] BacktoDram2 begin!" << endl;
         backData2 = bptree_nvm2->BacktoDram(dram_bptree2->MinHot(), read);
-        cout << "[DEBUG] BacktoDram2 over!" << endl;
         // gettimeofday(&en1, NULL);
         // nvm2_time += (en1.tv_sec-be1.tv_sec) + (en1.tv_usec-be1.tv_usec)/1000000.0;
         // cout << "size2: " << backData2.size();
         cache2_size += backData2.size();
-        cout << "[DEBUG] Insert cache2 size:" << cache2_size << endl;
         if(backData2.size()!=0){
             for(int i=0;i<backData2.size();i++){
                 gettimeofday(&be1, NULL);
@@ -245,7 +240,6 @@ void Read_Cache()     //预取
                 current_size++;
             }
         }
-        cout << "[DEBUG] Insert cache2 over!" << endl;
         backData2.clear();
     }
 
@@ -256,14 +250,11 @@ void Read_Cache()     //预取
         cache3_num++;
         vector<string> backData3;
         // gettimeofday(&be1, NULL);
-        cout << "[DEBUG] BacktoDram3 begin!" << endl;
         backData3 = bptree_nvm3->BacktoDram(dram_bptree3->MinHot(), read);
-        cout << "[DEBUG] BacktoDram3 over!" << endl;
         // gettimeofday(&en1, NULL);
         // nvm3_time += (en1.tv_sec-be1.tv_sec) + (en1.tv_usec-be1.tv_usec)/1000000.0;
         // cout << "size3: " << backData3.size() << endl;
         cache3_size += backData3.size();
-        cout << "[DEBUG] Insert cache3 size:" << cache3_size << endl;
         if(backData3.size()!=0){
             for(int i=0;i<backData3.size();i++){
                 gettimeofday(&be1, NULL);
@@ -275,16 +266,15 @@ void Read_Cache()     //预取
             }
         }
         backData3.clear();
-        cout << "[DEBUG] Insert cache3 over!" << endl;
     }
-    cout << "[DEBUG] Read Cache Over!" << endl;
+    // cout << "[DEBUG] Read Cache Over!" << endl;
 }
 
 void Write_Log()    //倒盘
 {   
     // std::lock_guard<std::mutex> lk(m_mutex);
     // m_mutex.lock();
-    cout << "[DEBUG] Begin write log!" << endl;
+    // cout << "[DEBUG] Begin write log!" << endl;
     //aep1
     vector<string> insertData1;
     insertData1 = dram_bptree1->FlushtoNvm();
@@ -397,7 +387,7 @@ string aepsystem::Get(const std::string& key)
     m_mutex.lock();
     // std::lock_guard<std::mutex> lk(m_mutex);
     get_count++;
-    cout << "[DEBUG] Get (" << get_count << ") key: " << char8toint64(key.c_str()) << " id: " << id << endl;
+    // cout << "[DEBUG] Get (" << get_count << ") key: " << char8toint64(key.c_str()) << " id: " << id << endl;
     // cout << "[DEBUG] Get (" << get_count << ") key: " << key << endl;
     if(id == 0)  // primary aep
     {
