@@ -193,7 +193,7 @@ void Read_Cache()     //预取
 {     
     cache_num++;
     size_t read = READ_DATA;
-
+    cout << "[DEBUG] Read Cache!" << endl;
     //aep1
     // bptree_nvm1->CreateChain();
     if (bptree_nvm1->GetCacheSzie() != 0){
@@ -211,7 +211,7 @@ void Read_Cache()     //预取
                 string tmp1 = bptree_nvm1->Get(char8toint64(backData1[i].c_str()));
                 gettimeofday(&en1, NULL);
                 nvm1_ctime += (en1.tv_sec-be1.tv_sec) + (en1.tv_usec-be1.tv_usec)/1000000.0;
-                dram_bptree1->Insert(backData1[i], tmp1);
+                dram_bptree1->Insert(backData1[i], tmp1, 1);
                 current_size++;
             }
         }
@@ -236,7 +236,7 @@ void Read_Cache()     //预取
                 string tmp2 = bptree_nvm2->Get(char8toint64(backData2[i].c_str()));
                 gettimeofday(&en1, NULL);
                 nvm2_ctime += (en1.tv_sec-be1.tv_sec) + (en1.tv_usec-be1.tv_usec)/1000000.0;
-                dram_bptree2->Insert(backData2[i], tmp2);
+                dram_bptree2->Insert(backData2[i], tmp2, 1);
                 current_size++;
             }
         }
@@ -261,7 +261,7 @@ void Read_Cache()     //预取
                 string tmp3 = bptree_nvm3->Get(char8toint64(backData3[i].c_str()));
                 gettimeofday(&en1, NULL);
                 nvm3_ctime += (en1.tv_sec-be1.tv_sec) + (en1.tv_usec-be1.tv_usec)/1000000.0;
-                dram_bptree3->Insert(backData3[i], tmp3);
+                dram_bptree3->Insert(backData3[i], tmp3, 1);
                 current_size++;
             }
         }
@@ -273,7 +273,7 @@ void Write_Log()    //倒盘
 {   
     // std::lock_guard<std::mutex> lk(m_mutex);
     // m_mutex.lock();
-    // cout << "[DEBUG] Begin write log!" << endl;
+    cout << "[DEBUG] Begin write log!" << endl;
     //aep1
     vector<string> insertData1;
     insertData1 = dram_bptree1->FlushtoNvm();
@@ -338,7 +338,7 @@ void aepsystem::Insert(const string &key, const string &value)
     m_mutex.lock();
     // std::lock_guard<std::mutex> lk(m_mutex);
     insert_count++;
-    // cout << "[DEBUG] Insert (" << insert_count << ") key: " << key << endl;
+    cout << "[DEBUG] Insert (" << insert_count << ") key: " << key << endl;
     if(id == 0)  // primary aep
     {
         bptree_nvm0->Insert(char8toint64(key.c_str()),value);
@@ -356,17 +356,17 @@ void aepsystem::Insert(const string &key, const string &value)
         switch (id)
         { 
             case 1:
-                dram_bptree1->Insert(key,value);
+                dram_bptree1->Insert(key,value,0);
                 current_size++; 
                 flush_size++;
                 break;
             case 2:
-                dram_bptree2->Insert(key,value); 
+                dram_bptree2->Insert(key,value,0); 
                 current_size++;  
                 flush_size++;
                 break;
             case 3:
-                dram_bptree3->Insert(key,value);  
+                dram_bptree3->Insert(key,value,0);  
                 current_size++; 
                 flush_size++;
                 break;
@@ -386,7 +386,7 @@ string aepsystem::Get(const std::string& key)
     // std::lock_guard<std::mutex> lk(m_mutex);
     get_count++;
     // cout << "[DEBUG] Get (" << get_count << ") key: " << char8toint64(key.c_str()) << " id: " << id << endl;
-    // cout << "[DEBUG] Get (" << get_count << ") key: " << key << endl;
+    cout << "[DEBUG] Get (" << get_count << ") key: " << key << endl;
     if(id == 0)  // primary aep
     {
         tmp_value = bptree_nvm0->Get(char8toint64(key.c_str()));

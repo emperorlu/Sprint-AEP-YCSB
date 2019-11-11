@@ -577,21 +577,31 @@ void BpTree::InsertChain(string key)
     HCrchain->insert(key);
 }
 
-void BpTree::Insert(string key, string value)
+void BpTree::Insert(string key, string value, int cache)
 {
     uint64_t vpoint;
     char keybuf[NVM_KeyBuf + 1];
-    char sign[NVM_SignSize + 1];
     char *pvalue = DrBpValueNVMAllocator_->Allocate(value.size());
     vpoint = (uint64_t)pvalue;
-    pmem_memcpy_persist(pvalue, value.c_str(), value.size());
-    memcpy(keybuf, key.c_str(), key.size());
-    memcpy(keybuf + NVM_KeySize, &vpoint, NVM_PointSize);
+    
+    if (!cache){
+        char sign[NVM_SignSize + 1];
+        pmem_memcpy_persist(pvalue, value.c_str(), value.size());
+        memcpy(keybuf, key.c_str(), key.size());
+        memcpy(keybuf + NVM_KeySize, &vpoint, NVM_PointSize);
+        snprintf(sign, sizeof(sign), "%07d", 1000000);
+        string signdata(sign, NVM_SignSize);
+        memcpy(keybuf + NVM_KeySize + NVM_PointSize, signdata.c_str(), NVM_SignSize);
+        string tmp_key(keybuf, NVM_KeyBuf);
+    }else{
+        memcpy(keybuf, key.c_str(), key.size());
+        pmem_memcpy_persist(pvalue, value.c_str(), value.size());
+        memcpy(key + NVM_KeySize, &vpoint, NVM_PointSize);
+        string tmp_key(keybuf, NVM_KeyBuf);
+        cout << "tmp_key: " << tmp_key << endl;
+    }
+    
 
-    snprintf(sign, sizeof(sign), "%07d", 1000000);
-    string signdata(sign, NVM_SignSize);
-    memcpy(keybuf + NVM_KeySize + NVM_PointSize, signdata.c_str(), NVM_SignSize);
-    string tmp_key(keybuf, NVM_KeyBuf);
     // cout << "tmp_key: " << tmp_key << endl;
     // InsertChain(tmp_key);
 
