@@ -30,9 +30,9 @@ namespace rocksdb{
     void DrNVM_BPlusTree_Wrapper::Insert(const string &key, const string &value, int cache){
         bptree_->Insert(key,value,cache);
     }
-    void DrNVM_BPlusTree_Wrapper::Insert(const string &key, const string &value, Statistic &stats, size_t which){
-        bptree_->Insert(key,value);
-    }
+    // void DrNVM_BPlusTree_Wrapper::Insert(const string &key, const string &value, Statistic &stats, size_t which){
+    //     bptree_->Insert(key,value);
+    // }
 
     void DrNVM_BPlusTree_Wrapper::Delete(const std::string& key) {
         bptree_->Delete(key);
