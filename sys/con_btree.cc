@@ -174,13 +174,12 @@ vector<string> btree::btree_back(int hot, size_t read){
           Cache->remove(tmp_key);
           if (dlist.size() >= read)
             return dlist;
-        }else{
-          itr++;
         }
       }
-
+      itr++;
     }
   }
+  cout << "return back" << endl;
   return dlist;
 }
 
