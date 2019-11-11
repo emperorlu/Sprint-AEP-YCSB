@@ -35,7 +35,7 @@ const size_t NVM_SIZE0 = 5 * (1ULL << 30);               // 45GB
 const size_t NVM_VALUE_SIZE0 = 20 * (1ULL << 30);         // 180GB
 const size_t NVM_SIZE = 10 * (1ULL << 30);               // 45GB
 const size_t NVM_VALUE_SIZE = 100 * (1ULL << 30);         // 180GB
-const size_t CACHE_SIZE = 30 * (1ULL << 30);         // 180GB
+const size_t CACHE_SIZE = 28 * (1ULL << 30);         // 180GB
 
 //阈值
 size_t OUT_DATA = 0;
