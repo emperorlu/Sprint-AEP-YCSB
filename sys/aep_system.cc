@@ -128,7 +128,7 @@ void* Data_out(void *arg)
             
             // std::lock_guard<std::mutex> lk(m_mutex);
             m_mutex.lock();
-            // cout << "[DEBUG] Begin out data!" << endl;
+            cout << "[DEBUG] Begin out data!" << endl;
             // cout << "[DEBUG] current_size:" << current_size << endl;
             out_num++;
             vector<string> outData;
@@ -385,7 +385,7 @@ string aepsystem::Get(const std::string& key)
     m_mutex.lock();
     // std::lock_guard<std::mutex> lk(m_mutex);
     get_count++;
-    cout << "[DEBUG] Get (" << get_count << ") key: " << char8toint64(key.c_str()) << " id: " << id << endl;
+    // cout << "[DEBUG] Get (" << get_count << ") key: " << char8toint64(key.c_str()) << " id: " << id << endl;
     // cout << "[DEBUG] Get (" << get_count << ") key: " << key << endl;
     if(id == 0)  // primary aep
     {
