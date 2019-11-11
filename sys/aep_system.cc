@@ -200,11 +200,14 @@ void Read_Cache()     //预取
         cache1_num++;
         vector<string> backData1;
         // gettimeofday(&be1, NULL);
+        cout << "[DEBUG] BacktoDram1 begin!" << endl;
         backData1 = bptree_nvm1->BacktoDram(dram_bptree1->MinHot(), read);
+        cout << "[DEBUG] BacktoDram1 over!" << endl;
         // gettimeofday(&en1, NULL);
         // nvm1_time += (en1.tv_sec-be1.tv_sec) + (en1.tv_usec-be1.tv_usec)/1000000.0;
         // cout << "size1: " << backData1.size();
         cache1_size += backData1.size();
+        cout << "[DEBUG] Insert cache1 size:" << cache1_size << endl;
         if(backData1.size()!=0){
             for(int i=0;i<backData1.size();i++){
                 gettimeofday(&be1, NULL);
@@ -215,6 +218,7 @@ void Read_Cache()     //预取
                 current_size++;
             }
         }
+        cout << "[DEBUG] Insert cache1 over!" << endl;
         backData1.clear();
     }
 
@@ -225,11 +229,14 @@ void Read_Cache()     //预取
         cache2_num++;
         vector<string> backData2;
         // gettimeofday(&be1, NULL);
+        cout << "[DEBUG] BacktoDram2 begin!" << endl;
         backData2 = bptree_nvm2->BacktoDram(dram_bptree2->MinHot(), read);
+        cout << "[DEBUG] BacktoDram2 over!" << endl;
         // gettimeofday(&en1, NULL);
         // nvm2_time += (en1.tv_sec-be1.tv_sec) + (en1.tv_usec-be1.tv_usec)/1000000.0;
         // cout << "size2: " << backData2.size();
         cache2_size += backData2.size();
+        cout << "[DEBUG] Insert cache2 size:" << cache2_size << endl;
         if(backData2.size()!=0){
             for(int i=0;i<backData2.size();i++){
                 gettimeofday(&be1, NULL);
@@ -240,6 +247,7 @@ void Read_Cache()     //预取
                 current_size++;
             }
         }
+        cout << "[DEBUG] Insert cache2 over!" << endl;
         backData2.clear();
     }
 
@@ -250,11 +258,14 @@ void Read_Cache()     //预取
         cache3_num++;
         vector<string> backData3;
         // gettimeofday(&be1, NULL);
+        cout << "[DEBUG] BacktoDram3 begin!" << endl;
         backData3 = bptree_nvm3->BacktoDram(dram_bptree3->MinHot(), read);
+        cout << "[DEBUG] BacktoDram3 over!" << endl;
         // gettimeofday(&en1, NULL);
         // nvm3_time += (en1.tv_sec-be1.tv_sec) + (en1.tv_usec-be1.tv_usec)/1000000.0;
         // cout << "size3: " << backData3.size() << endl;
         cache3_size += backData3.size();
+        cout << "[DEBUG] Insert cache3 size:" << cache3_size << endl;
         if(backData3.size()!=0){
             for(int i=0;i<backData3.size();i++){
                 gettimeofday(&be1, NULL);
@@ -266,6 +277,7 @@ void Read_Cache()     //预取
             }
         }
         backData3.clear();
+        cout << "[DEBUG] Insert cache3 over!" << endl;
     }
     cout << "[DEBUG] Read Cache Over!" << endl;
 }
