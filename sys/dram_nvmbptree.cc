@@ -603,8 +603,8 @@ void BpTree::Insert(string key, string value, int cache)
     
     string tmp_key(keybuf, NVM_KeyBuf);
 
-    if(cache)
-        cout << "cache:" << cache << " tmp_key: " << tmp_key << endl;
+    // if(cache)
+    //     cout << "cache:" << cache << " tmp_key: " << tmp_key << endl;
     // InsertChain(tmp_key);
 
     if(m_root == nullptr)
