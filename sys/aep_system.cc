@@ -181,7 +181,7 @@ void* Data_out(void *arg)
                 bptree_nvm3->Updakey(updakey3[i]);
             }
             updakey3.clear();
-            flush_size = current_size;
+            // flush_size = current_size;
             m_mutex.unlock();
         }
     }
