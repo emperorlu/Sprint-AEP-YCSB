@@ -267,6 +267,7 @@ void Read_Cache()     //预取
         }
         backData3.clear();
     }
+    cout << "[DEBUG] Read Cache Over!" << endl;
 }
 
 void Write_Log()    //倒盘
