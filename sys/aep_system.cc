@@ -193,7 +193,7 @@ void Read_Cache()     //预取
 {     
     cache_num++;
     size_t read = READ_DATA;
-    cout << "[DEBUG] Read Cache!" << endl;
+    // cout << "[DEBUG] Read Cache!" << endl;
     //aep1
     // bptree_nvm1->CreateChain();
     if (bptree_nvm1->GetCacheSzie() != 0){
