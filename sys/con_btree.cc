@@ -152,29 +152,32 @@ vector<string> btree::btree_back(int hot, size_t read){
       if((*itr).hot < hot){
         return dlist;
       }
-      char keybuf[NVM_KeyBuf + 1];
-      char tmp[8];
-      char sign[NVM_SignSize + 1];
-      fillchar8wirhint64(tmp, (*itr).key);
-      string str(tmp, 8);
-      memcpy(keybuf, str.c_str(), str.size());
-      // memcpy(keybuf + NVM_KeySize, '0', NVM_PointSize);
-      snprintf(sign, sizeof(sign), "%07d", (*itr).hot);
-      string signdata(sign, NVM_SignSize);
-      memcpy(keybuf + NVM_KeySize + NVM_PointSize, signdata.c_str(), NVM_SignSize);
-      string tkey(keybuf, NVM_KeyBuf);
+      if((*itr).hot > hot){
+        char keybuf[NVM_KeyBuf + 1];
+        char tmp[8];
+        char sign[NVM_SignSize + 1];
+        fillchar8wirhint64(tmp, (*itr).key);
+        string str(tmp, 8);
+        memcpy(keybuf, str.c_str(), str.size());
+        // memcpy(keybuf + NVM_KeySize, '0', NVM_PointSize);
+        snprintf(sign, sizeof(sign), "%07d", (*itr).hot);
+        string signdata(sign, NVM_SignSize);
+        memcpy(keybuf + NVM_KeySize + NVM_PointSize, signdata.c_str(), NVM_SignSize);
+        string tkey(keybuf, NVM_KeyBuf);
 
 
-      Keyvalue tmp_key(str, str);
-      if(Cache->contains(tmp_key)){
-        dlist.push_back(tkey);
-        itr = HCrchain->theLists[i].erase(itr);
-        Cache->remove(tmp_key);
-        if (dlist.size() >= read)
-          return dlist;
-      }else{
-        itr++;
+        Keyvalue tmp_key(str, str);
+        if(Cache->contains(tmp_key)){
+          dlist.push_back(tkey);
+          itr = HCrchain->theLists[i].erase(itr);
+          Cache->remove(tmp_key);
+          if (dlist.size() >= read)
+            return dlist;
+        }else{
+          itr++;
+        }
       }
+
     }
   }
   return dlist;
