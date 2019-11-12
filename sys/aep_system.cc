@@ -102,6 +102,7 @@ double nvm2_ctime = 0;
 double nvm3_itime = 0;
 double nvm3_gtime = 0;
 double nvm3_ctime = 0;
+double nvm1_backtime = 0;
 struct timeval be1,en1;
 
 int Find_aep(string key)
@@ -199,10 +200,10 @@ void Read_Cache()     //预取
     if (bptree_nvm1->GetCacheSzie() != 0){
         cache1_num++;
         vector<string> backData1;
-        // gettimeofday(&be1, NULL);
+        gettimeofday(&be1, NULL);
         backData1 = bptree_nvm1->BacktoDram(dram_bptree1->MinHot(), read);
-        // gettimeofday(&en1, NULL);
-        // nvm1_time += (en1.tv_sec-be1.tv_sec) + (en1.tv_usec-be1.tv_usec)/1000000.0;
+        gettimeofday(&en1, NULL);
+        nvm1_backtime += (en1.tv_sec-be1.tv_sec) + (en1.tv_usec-be1.tv_usec)/1000000.0;
         // cout << "size1: " << backData1.size();
         cache1_size += backData1.size();
         if(backData1.size()!=0){
@@ -523,7 +524,7 @@ void aepsystem::Delete(const std::string& key)
 }
 
 aepsystem::aepsystem(){
-    is_cache = 0;
+    is_cache = 1;
     cache_size = 1;
     buf_size = KEY_SIZE + VALUE_SIZE + 1;
     // one = buf_size;
@@ -627,6 +628,7 @@ void aepsystem::End()
     cout << "[time] nvm1_ctime: "  << nvm1_ctime << endl;
     cout << "[time] nvm2_ctime: "  << nvm2_ctime << endl;
     cout << "[time] nvm3_ctime: "  << nvm3_ctime << endl;
+    cout << "[time] nvm1_backtime: "  << nvm1_backtime << endl;
     cout << endl;
     // cout << cache_table1.getSize() << endl;
     // cout << cache_table2.getSize() << endl;
