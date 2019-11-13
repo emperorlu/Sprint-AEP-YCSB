@@ -239,8 +239,9 @@ class RangChain
             cout << i << ":";
             typename list<string>::iterator itr = theLists[i].begin();
             while(itr != theLists[i].end()){
-                cout << GetHot(*itr) << ": " << (*itr).length() << ": "; //"\t";
-                cout << (*itr)[(*itr).length()-8] << "\t";
+                // cout << GetHot(*itr) << ": " << (*itr).length() << ": "; //"\t";
+                // cout << (*itr)[(*itr).length()-8] << "\t";
+                cout << GetHot(*itr) << endl;
                 itr++;
             }
             cout << endl;
