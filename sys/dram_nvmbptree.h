@@ -241,7 +241,7 @@ class RangChain
             while(itr != theLists[i].end()){
                 // cout << GetHot(*itr) << ": " << (*itr).length() << ": "; //"\t";
                 // cout << (*itr)[(*itr).length()-8] << "\t";
-                cout << GetHot(*itr) << endl;
+                cout << GetHot(*itr) << "\t";
                 itr++;
             }
             cout << endl;
