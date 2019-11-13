@@ -35,6 +35,11 @@ public:
 
     void Delete(const unsigned long key);
     vector<string> BacktoDram(int hot, size_t read);
+    void traver(){
+        if(bt)
+            bt->HCrchain->traver();
+        exit(0);
+    }
 
     const std::string Get(const unsigned long key);
     void Updakey(const string key);

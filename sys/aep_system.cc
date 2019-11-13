@@ -632,8 +632,8 @@ void aepsystem::End()
     // cout << cache_table1.getSize() << endl;
     // cout << cache_table2.getSize() << endl;
     // cout << cache_table3.getSize() << endl;
-    dram_bptree1->HCrchain->traver();
-    bptree_nvm1->bt->HCrchain->traver();
+    dram_bptree1->traver();
+    bptree_nvm1->traver();
 }
 
 void aepsystem::Print()

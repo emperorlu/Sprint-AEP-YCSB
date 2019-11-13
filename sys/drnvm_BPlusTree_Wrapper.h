@@ -12,6 +12,9 @@ public:
 
     void Initialize(const std::string &valuepath, uint64_t valuesize, int m=4, size_t key_size = 16, size_t buf_size = 17);
     void Insert(const string &key, const string &value, int cache);
+    void traver(){
+        bptree_->HCrchain->traver();
+    }
     // void Insert(const string &key, const string &value, Statistic &stats, size_t which);
 
     void Delete(const std::string& key);
