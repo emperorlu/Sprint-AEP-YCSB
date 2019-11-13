@@ -161,7 +161,7 @@ class CONRangChain
         listSize = 10;
         theLists = vector<list<entry_key_t> >(listSize);
         myList = vector<list<entry_key_t> >(listSize);
-        maxhot = 30;
+        maxhot = 10;
         minhot = 0;
         maxSize = 10000000;
         currentSize = 0;
@@ -269,15 +269,6 @@ class CONRangChain
       currentSize++;
       return true;  
     }
-    uint64_t  maxhot, minhot;
-    vector<list<entry_key_t> > theLists;   // The array of Lists
-    int currentSize;
-  private:
-    int listSize;
-    int maxSize;
-    vector<list<entry_key_t>>  myList;
-    // int hc; //c or h
-
     int myid(uint64_t value)
     {
         if(maxhot == minhot) {
@@ -288,6 +279,14 @@ class CONRangChain
         }
         return 1.0 * (value - minhot) / (maxhot - minhot) * listSize;
     }
+    uint64_t  maxhot, minhot;
+    vector<list<entry_key_t> > theLists;   // The array of Lists
+    int currentSize;
+  private:
+    int listSize;
+    int maxSize;
+    vector<list<entry_key_t>>  myList;
+    // int hc; //c or h
 
     bool myinsert(const entry_key_t x, uint64_t value)
     {   
