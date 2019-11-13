@@ -145,8 +145,8 @@ vector<string> btree::btree_back(int hot, size_t read){
   bcak_count++;
   // cout << "[DEBUG] back (" << bcak_count << ") Ca size: " << Cache->currentSize;
   // cout << "HC size: " << HCrchain->currentSize << endl;
-  int id = HCrchain->myid(hot);
-  for(int i = HCrchain->theLists.size()-1; i > id; i--)
+  // int id = HCrchain->myid(hot);
+  for(int i = HCrchain->theLists.size()-1; i >= 0; i--)
   {
     typename list<entry_key_t>::iterator itr = HCrchain->theLists[i].begin();
     while(itr != HCrchain->theLists[i].end()){
