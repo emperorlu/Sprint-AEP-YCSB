@@ -166,17 +166,17 @@ vector<string> btree::btree_back(int hot, size_t read){
         string tkey(keybuf, NVM_KeyBuf);
 
 
-        Keyvalue tmp_key(str, str);
-        if(Cache->contains(tmp_key)){
-          dlist.push_back(tkey);
-          itr = HCrchain->theLists[i].erase(itr);
-          Cache->remove(tmp_key);
-          if (dlist.size() >= read)
-            return dlist;
-        }else
-        {
-          itr++;
-        }
+        // Keyvalue tmp_key(str, str);
+        // if(Cache->contains(tmp_key)){
+        dlist.push_back(tkey);
+        itr = HCrchain->theLists[i].erase(itr);
+        // Cache->remove(tmp_key);
+        if (dlist.size() >= read)
+          return dlist;
+        // }else
+        // {
+        //   itr++;
+        // }
       }else
         itr++;
     }
