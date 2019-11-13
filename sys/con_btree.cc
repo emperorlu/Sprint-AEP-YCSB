@@ -149,9 +149,9 @@ vector<string> btree::btree_back(int hot, size_t read){
   {
     typename list<entry_key_t>::iterator itr = HCrchain->theLists[i].begin();
     while(itr != HCrchain->theLists[i].end()){
-      // if((*itr).hot <= hot){
-      //   return dlist;
-      // }
+      if((*itr).hot < hot){
+        return dlist;
+      }
       if((*itr).hot > hot){
         char keybuf[NVM_KeyBuf + 1];
         char tmp[8];
@@ -160,23 +160,23 @@ vector<string> btree::btree_back(int hot, size_t read){
         string str(tmp, 8);
         memcpy(keybuf, str.c_str(), str.size());
         // memcpy(keybuf + NVM_KeySize, '0', NVM_PointSize);
-        snprintf(sign, sizeof(sign), "%07d", (*itr).hot);
-        string signdata(sign, NVM_SignSize);
-        memcpy(keybuf + NVM_KeySize + NVM_PointSize, signdata.c_str(), NVM_SignSize);
-        string tkey(keybuf, NVM_KeyBuf);
+        // snprintf(sign, sizeof(sign), "%07d", (*itr).hot);
+        // string signdata(sign, NVM_SignSize);
+        // memcpy(keybuf + NVM_KeySize + NVM_PointSize, signdata.c_str(), NVM_SignSize);
+        // string tkey(keybuf, NVM_KeyBuf);
 
 
-        // Keyvalue tmp_key(str, str);
-        // if(Cache->contains(tmp_key)){
-        dlist.push_back(tkey);
-        itr = HCrchain->theLists[i].erase(itr);
-        // Cache->remove(tmp_key);
-        if (dlist.size() >= read)
-          return dlist;
-        // }else
-        // {
-        //   itr++;
-        // }
+        Keyvalue tmp_key(str, str);
+        if(Cache->contains(tmp_key)){
+          dlist.push_back(tkey);
+          itr = HCrchain->theLists[i].erase(itr);
+          Cache->remove(tmp_key);
+          if (dlist.size() >= read)
+            return dlist;
+        }else
+        {
+          itr++;
+        }
       }else
         itr++;
     }
