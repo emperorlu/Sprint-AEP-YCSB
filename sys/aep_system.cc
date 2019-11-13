@@ -194,7 +194,7 @@ void Read_Cache()     //预取
     cache_num++;
     size_t read = READ_DATA;
     //aep1
-    cout << "begin (" << cache_num << ")cache!" << endl;
+    // cout << "begin (" << cache_num << ")cache!" << endl;
     // bptree_nvm1->CreateChain();
     if (bptree_nvm1->GetCacheSzie() != 0){
         cache1_num++;
@@ -267,7 +267,7 @@ void Read_Cache()     //预取
         }
         backData3.clear();
     }
-    cout << "[DEBUG] Read Cache Over!" << endl;
+    // cout << "[DEBUG] Read Cache Over!" << endl;
 }
 
 void Write_Log()    //倒盘
