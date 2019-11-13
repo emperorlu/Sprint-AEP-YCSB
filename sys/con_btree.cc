@@ -174,8 +174,11 @@ vector<string> btree::btree_back(int hot, size_t read){
           dlist.push_back(tkey);
           itr = HCrchain->theLists[i].erase(itr);
           Cache->remove(tmp_key);
-          if (dlist.size() >= read)
+          if (dlist.size() >= read){
+            cout << "over1!" << endl;
+            HCrchain->traver();
             return dlist;
+          } 
         }else
         {
           itr++;
@@ -184,6 +187,8 @@ vector<string> btree::btree_back(int hot, size_t read){
         itr++;
     }
   }
+  cout << "over2!" << endl;
+  HCrchain->traver();
   return dlist;
 }
 

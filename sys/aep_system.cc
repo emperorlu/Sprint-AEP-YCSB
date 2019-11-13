@@ -203,7 +203,7 @@ void Read_Cache()     //预取
         backData1 = bptree_nvm1->BacktoDram(dram_bptree1->MinHot(), read);
         gettimeofday(&en1, NULL);
         nvm1_backtime += (en1.tv_sec-be1.tv_sec) + (en1.tv_usec-be1.tv_usec)/1000000.0;
-        // cout << "size1: " << backData1.size() << endl;
+        cout << "size1: " << backData1.size() << endl;
         cache1_size += backData1.size();
         if(backData1.size()!=0){
             for(int i=0;i<backData1.size();i++){
