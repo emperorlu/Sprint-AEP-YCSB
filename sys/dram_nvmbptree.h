@@ -187,7 +187,7 @@ class RangChain
         minhot = 0;
         Mah=0;
         Mih=10;
-        maxSize = 100000;
+        maxSize = 1000000;
         for(std::size_t i = 0; i < myList.size(); i++){
             if(!myList[i].empty()) {
                 myList[i].clear();
