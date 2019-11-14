@@ -547,7 +547,7 @@ void aepsystem::Initialize()
     // bptree_nvm0->Initialize(PATH0, NVM_SIZE, VALUEPATH0, NVM_VALUE_SIZE, 10, KEY_SIZE, buf_size);
     OUT_SIZE = 100000 * 0.6;
     FLUSH_SIZE = OUT_SIZE / 6;
-    OUT_DATA = OUT_SIZE / 600;
+    OUT_DATA = OUT_SIZE / 60;
     READ_DATA = OUT_DATA;
     // READ_DATA = READ_DATA * cache_size;
     cout << "System run!" << endl;
