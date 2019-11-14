@@ -13,16 +13,16 @@
 fieldcount=1
 fieldlength=4096
 
-recordcount=100000
-operationcount=2000000
+recordcount=1000000
+operationcount=1000000
 workload=com.yahoo.ycsb.workloads.CoreWorkload
 
 readallfields=true
 
-readproportion=0.95
+readproportion=1
 updateproportion=0
 scanproportion=0
-insertproportion=0.05
+insertproportion=0
 
 requestdistribution=latest
 
