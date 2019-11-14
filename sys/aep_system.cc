@@ -145,6 +145,7 @@ void* Data_out(void *arg)
                     current_size--;
                 }
             }
+            update_num1 += updakey1.size();
             for(int i=0;i<updakey1.size();i++){
                 bptree_nvm1->Updakey(updakey1[i]);
             }
