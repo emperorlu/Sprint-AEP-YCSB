@@ -19,10 +19,11 @@ workload=com.yahoo.ycsb.workloads.CoreWorkload
 
 readallfields=true
 
-readproportion=1
+readproportion=0.95
 updateproportion=0
 scanproportion=0
-insertproportion=0
+insertproportion=0.05
 
-requestdistribution=latest
+# requestdistribution=latest
+requestdistribution=hotspot
 
