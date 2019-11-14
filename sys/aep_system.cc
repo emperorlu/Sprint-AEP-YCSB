@@ -524,7 +524,7 @@ void aepsystem::Delete(const std::string& key)
 }
 
 aepsystem::aepsystem(){
-    is_cache = 0;
+    is_cache = 1;
     cache_size = 1;
     buf_size = KEY_SIZE + VALUE_SIZE + 1;
     // one = buf_size;
@@ -636,8 +636,8 @@ void aepsystem::End()
 
     // cout << "dram1: " << endl;
     // dram_bptree1->traver();
-    cout << "nvm1: " << endl;
-    bptree_nvm1->traver();
+    // cout << "nvm1: " << endl;
+    // bptree_nvm1->traver();
 }
 
 void aepsystem::Print()
