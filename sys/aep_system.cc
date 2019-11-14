@@ -635,8 +635,8 @@ void aepsystem::End()
 
     // cout << "dram1: " << endl;
     // dram_bptree1->traver();
-    // cout << "nvm1: " << endl;
-    // bptree_nvm1->traver();
+    cout << "nvm1: " << endl;
+    bptree_nvm1->traver();
 }
 
 void aepsystem::Print()

@@ -36,8 +36,10 @@ public:
     void Delete(const unsigned long key);
     vector<string> BacktoDram(int hot, size_t read);
     void traver(){
-        if(bt)
-            bt->HCrchain->traver();
+        if(bt){
+            // bt->HCrchain->traver();
+            cout << "cache size: " << bt->Cache->getSize() << endl;
+        }
         exit(0);
     }
 
