@@ -182,7 +182,7 @@ void* Data_out(void *arg)
                 bptree_nvm3->Updakey(updakey3[i]);
             }
             updakey3.clear();
-            current_size=0;
+            // current_size=0;
             // flush_size = current_size;
             m_mutex.unlock();
         }
@@ -524,7 +524,7 @@ void aepsystem::Delete(const std::string& key)
 }
 
 aepsystem::aepsystem(){
-    is_cache = 1;
+    is_cache = 0;
     cache_size = 1;
     buf_size = KEY_SIZE + VALUE_SIZE + 1;
     // one = buf_size;
