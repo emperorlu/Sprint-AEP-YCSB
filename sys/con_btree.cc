@@ -146,8 +146,6 @@ vector<string> btree::btree_back(int hot, size_t read){
   // cout << "[DEBUG] back (" << bcak_count << ") Ca size: " << Cache->currentSize;
   // cout << "HC size: " << HCrchain->currentSize << endl;
   // int id = HCrchain->myid(hot);
-  cout << "back:" << bcak_count++ << endl;
-  HCrchain->traver();
   for(int i = HCrchain->theLists.size()-1; i >= 0; i--)
   {
     typename list<entry_key_t>::iterator itr = HCrchain->theLists[i].begin();
@@ -175,8 +173,6 @@ vector<string> btree::btree_back(int hot, size_t read){
           itr = HCrchain->theLists[i].erase(itr);
           Cache->remove(tmp_key);
           if (dlist.size() >= read){
-            cout << "over1!" << endl;
-            HCrchain->traver();
             return dlist;
           } 
         }else
