@@ -183,8 +183,8 @@ vector<string> btree::btree_back(int hot, size_t read){
         itr++;
     }
   }
-  cout << "over2!" << endl;
-  HCrchain->traver();
+  // cout << "over2!" << endl;
+  // HCrchain->traver();
   return dlist;
 }
 
