@@ -84,6 +84,7 @@ int out_num = 0;
 int cache_find = 0;
 
 int update_num1 = 0;
+int flush_num1 = 0;
 
 size_t out1_size = 0;
 size_t out2_size = 0;
@@ -280,6 +281,7 @@ void Write_Log()    //倒盘
     //aep1
     vector<string> insertData1;
     insertData1 = dram_bptree1->FlushtoNvm();
+    flush_num1 += insertData1.size();
     // cout << "flush size: " << insertData1.size() << endl;
     gettimeofday(&be1, NULL);
     for(int i=0;i<insertData1.size();i++){
@@ -619,6 +621,7 @@ void aepsystem::End()
     cout << "[COUNT] insert_count: "  << insert_count << endl;
     cout << "[COUNT] get_count: "  << get_count << endl;
     cout << "[COUNT] update_num1: "  << update_num1 << endl;
+    cout << "[COUNT] flush_num1: "  << flush_num1 << endl;
     cout << endl;
     cout << "[time] nvm1_itime: "  << nvm1_itime << endl;
     cout << "[time] nvm2_itime: "  << nvm2_itime << endl;
