@@ -142,7 +142,7 @@ void btree::btree_updakey(const string key){
 static long bcak_count = 0;
 vector<string> btree::btree_back(int hot, size_t read){
   vector<string> dlist;
-  bcak_count++;
+  // bcak_count++;
   // cout << "[DEBUG] back (" << bcak_count << ") Ca size: " << Cache->currentSize;
   // cout << "HC size: " << HCrchain->currentSize << endl;
   // int id = HCrchain->myid(hot);
