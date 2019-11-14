@@ -661,7 +661,7 @@ void BpTree::Delete(string key)
             m_root = m_root->GetPointer(0);
         }
     }else 
-        printf("[DEBUG] Delet key.(%s) faild\n", key.c_str());
+        // printf("[DEBUG] Delet key.(%s) faild\n", key.c_str());
     return ;   
 }
 string BpTree::Get(const std::string& key) {
