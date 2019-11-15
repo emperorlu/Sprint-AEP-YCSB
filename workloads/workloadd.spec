@@ -24,6 +24,6 @@ updateproportion=0
 scanproportion=0
 insertproportion=0.05
 
-# requestdistribution=latest
-requestdistribution=hotspot
+requestdistribution=latest
+# requestdistribution=hotspot
 
