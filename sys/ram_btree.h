@@ -25,59 +25,61 @@
 #include <mutex>
 #include <vector>
 #include <list>
-#include "Cachetable.h"
-#include <map>
+// #include "hashtable.h"
+
 #include "nvm_common2.h"
 
 using namespace rocksdb;
 
-#define PAGESIZE 256
+#define RAM_PAGESIZE 256
 
 // #define CPU_FREQ_MHZ (1994)
 // #define DELAY_IN_NS (1000)
-#define CACHE_LINE_SIZE 64 
+#define RAM_CACHE_LINE_SIZE 64 
 // #define QUERY_NUM 25
 
-#define IS_FORWARD(c) (c % 2 == 0)
+#define RAM_IS_FORWARD(c) (c % 2 == 0)
 
-// using entry_key_t = uint64_t;
-struct entry_key_t {
+// using ram_entry_key_t = uint64_t;
+struct ram_entry_key_t {
     uint64_t key;
-    uint64_t hot;
-    entry_key_t() :key(ULONG_MAX), hot(0) {}
-    entry_key_t(uint64_t key_, uint64_t hot_ = 0) :key(key_), hot(hot_){}
-    entry_key_t & operator = (const entry_key_t &entry) {
-        if(this == &entry) {
+    uint32_t hot;
+    uint32_t flag;
+    ram_entry_key_t() :key(ULONG_MAX), hot(0), flag(0) {}
+    ram_entry_key_t(uint64_t key_, uint32_t hot_ = 0, uint32_t flag_ = 0) :key(key_), hot(hot_), flag(flag_){}
+    ram_entry_key_t & operator = (const ram_entry_key_t &ram_entry) {
+        if(this == &ram_entry) {
             return *this;
         }
 
-        key = entry.key;
-        hot = entry.hot;
+        key = ram_entry.key;
+        hot = ram_entry.hot;
+        flag = ram_entry.flag;
         return *this;
     }
 
-    bool operator < (const entry_key_t &entry) {
-        return key < entry.key;
+    bool operator < (const ram_entry_key_t &ram_entry) {
+        return key < ram_entry.key;
     }
 
-    bool operator <= (const entry_key_t &entry) {
-        return key <= entry.key;
+    bool operator <= (const ram_entry_key_t &ram_entry) {
+        return key <= ram_entry.key;
     }
 
-    bool operator > (const entry_key_t &entry) {
-        return key > entry.key;
+    bool operator > (const ram_entry_key_t &ram_entry) {
+        return key > ram_entry.key;
     }
 
-    bool operator >= (const entry_key_t &entry) {
-        return key >= entry.key;
+    bool operator >= (const ram_entry_key_t &ram_entry) {
+        return key >= ram_entry.key;
     }
 
-    bool operator == (const entry_key_t &entry) {
-        return key == entry.key;
+    bool operator == (const ram_entry_key_t &ram_entry) {
+        return key == ram_entry.key;
     }
 
-    bool operator != (const entry_key_t &entry) {
-        return key != entry.key;
+    bool operator != (const ram_entry_key_t &ram_entry) {
+        return key != ram_entry.key;
     }
 
     operator int64_t () {
@@ -98,67 +100,17 @@ struct entry_key_t {
 };
 
 
-// static inline void cpu_pause()
-// {
-//     __asm__ volatile ("pause" ::: "memory");
-// }
+class ram_node;
 
-// static inline unsigned long read_tsc(void)
-// {
-//     unsigned long var;
-//     unsigned int hi, lo;
 
-//     asm volatile ("rdtsc" : "=a" (lo), "=d" (hi));
-//     var = ((unsigned long long int) hi << 32) | lo;
 
-//     return var;
-// }
-
-// unsigned long write_latency_in_ns=0;
-// unsigned long long search_time_in_insert=0;
-// unsigned int gettime_cnt= 0;
-// unsigned long long clflush_time_in_insert=0;
-// unsigned long long update_time_in_insert=0;
-// int clflush_cnt = 0;
-// int node_cnt=0;
-
-using namespace std;
-
-// inline void mfence()
-// {
-//   asm volatile("mfence":::"memory");
-// }
-
-inline void clflush(char *data, int len)
-{
-    nvm_persist(data, len);
-//   volatile char *ptr = (char *)((unsigned long)data &~(CACHE_LINE_SIZE-1));
-//   mfence();
-//   for(; ptr<data+len; ptr+=CACHE_LINE_SIZE){
-//     unsigned long etsc = read_tsc() + 
-//       (unsigned long)(write_latency_in_ns*CPU_FREQ_MHZ/1000);
-//     asm volatile("clflush %0" : "+m" (*(volatile char *)ptr));
-//     while (read_tsc() < etsc) cpu_pause();
-//     //++clflush_cnt;
-//   }
-//   mfence();
-}
-
-static void alloc_memalign(void **ret, size_t alignment, size_t size) {
-    // posix_memalign(ret, alignment, size);
-    char *mem =  node_alloc->Allocate(size);
-    *ret = mem;
-}
-
-class bpnode;
-
-class CONRangChain 
+class RamChain 
 {
   public:
-    CONRangChain()
+    RamChain()
     {
         listSize = 10;
-        theLists = vector<list<entry_key_t> >(listSize);
+        theLists = vector<list<ram_entry_key_t> >(listSize);
         minhot = 10;
         maxSize = 100000;
         currentSize = 0;
@@ -180,7 +132,7 @@ class CONRangChain
         for(std::size_t i = 0; i < theLists.size(); i++)
         {
             cout << i << ":";
-            typename list<entry_key_t>::iterator itr = theLists[i].begin();
+            typename list<ram_entry_key_t>::iterator itr = theLists[i].begin();
             while(itr != theLists[i].end()){
                 cout << (*itr).hot << "\t";
                 itr++;
@@ -191,19 +143,18 @@ class CONRangChain
     
     bool remove()
     {   
-        int i = 0;
+        int i = theLists.size()-1;
         while (theLists[i].size() == 0){
-            i++;
+            i--;
         }
         theLists[i].pop_front();
         currentSize--;
         return true;
     }
     
-
-    bool insert(const entry_key_t &x)
+    bool insert(const ram_entry_key_t &x)
     {   
-      uint64_t value = x.hot;
+      uint32_t value = x.hot;
       if(currentSize >= maxSize){
           if(value <= minhot){
             return false;
@@ -216,14 +167,14 @@ class CONRangChain
       currentSize++;
       return true;  
     }
-    uint64_t  minhot;
-    vector<list<entry_key_t> > theLists;   // The array of Lists
+    uint32_t minhot;
+    vector<list<ram_entry_key_t> > theLists;   // The array of Lists
     int currentSize;
   private:
     int listSize;
     int maxSize;
 
-    int myid(uint64_t value)
+    int myid(uint32_t value)
     {
         if(value <= 0 ) return 0;
         int id = log(value)/ log(2);
@@ -232,9 +183,20 @@ class CONRangChain
     }
 };
 
+class ram_entry{ 
+  public:
+    ram_entry_key_t key; // 8 bytes
+    char* ptr; // 8 bytes
+    ram_entry(){
+      key = ram_entry_key_t(ULONG_MAX);
+      ptr = NULL;
+    }
 
+    friend class ram_node;
+    friend class ram_tree;
+};
 
-class btree{
+class ram_tree{
   private:
     NVMAllocator *node_alloc;
     int height;
@@ -242,49 +204,45 @@ class btree{
 
   public:
 
-    btree();
-    // btree(bpnode *root);
-    void btree_init(const std::string &path, uint64_t keysize); 
-    ~btree() {
+    ram_tree();
+    // ram_tree(ram_node *root);
+    void btree_init(); 
+    ~ram_tree() {
         if(node_alloc) {
             delete node_alloc;
         }
         delete HCrchain;
-        // delete Cache;
     }
-    void *NewBpNode();
+    void *Newram_node();
     void setNewRoot(char *);
     void getNumberOfNodes();
-    void btree_insert(entry_key_t, char*);
-    void btree_insert_internal(char *, entry_key_t, char *, uint32_t);
-    void btree_delete(entry_key_t);
-    void btree_delete_internal(entry_key_t, char *, uint32_t, entry_key_t *, bool *, bpnode **);
-    char *btree_search(entry_key_t);
-    void btree_search_range(entry_key_t, entry_key_t, unsigned long *); 
-    void btree_search_range(entry_key_t, entry_key_t, std::vector<std::string> &values, int &size); 
+    void btree_insert(ram_entry_key_t, char*);
+    void btree_insert_internal(char *, ram_entry_key_t, char *, uint32_t);
+    void btree_delete(ram_entry_key_t);
+    void btree_delete_internal(ram_entry_key_t, char *, uint32_t, ram_entry_key_t *, bool *, ram_node **);
+    char *btree_search(ram_entry_key_t);
+    void btree_search_range(ram_entry_key_t, ram_entry_key_t, unsigned long *); 
+    void btree_search_range(ram_entry_key_t, ram_entry_key_t, std::vector<std::string> &values, int &size); 
     void printAll();
     void PrintInfo();
     void CalculateSapce(uint64_t &space);
-    // void chain_insert(entry_key_t key);
-    void btree_updakey(entry_key_t key);
-    vector<entry_key_t> btree_back(int hot, size_t read);
-    int cache_size(){
-      return HCrchain->getSize();
+    vector<ram_entry> range_leafs();
+    int minHot(){
+      return HCrchain->minhot; 
     }
+    vector<ram_entry_key_t> btree_out(size_t out);
 
-    friend class bpnode;
+    friend class ram_node;
 
     // void CreateChain();
-
+    RamChain *HCrchain;
     // vector<string> BacktoDram(int hot, size_t read);
-    CONRangChain *HCrchain;
-    // CashTable *Cache;
 };
 
-class header{
+class ram_header{
   private:
-    bpnode* leftmost_ptr;         // 8 bytes
-    bpnode* sibling_ptr;          // 8 bytes
+    ram_node* leftmost_ptr;         // 8 bytes
+    ram_node* sibling_ptr;          // 8 bytes
     uint32_t level;             // 4 bytes
     uint8_t switch_counter;     // 1 bytes
     uint8_t is_deleted;         // 1 bytes
@@ -293,11 +251,11 @@ class header{
     // uint8_t is_d   
     std::mutex *mtx;      // 8 bytes
 
-    friend class bpnode;
-    friend class btree;
+    friend class ram_node;
+    friend class ram_tree;
 
   public:
-    header() {
+    ram_header() {
       mtx = new std::mutex();
 
       leftmost_ptr = NULL;  
@@ -307,45 +265,32 @@ class header{
       is_deleted = false;
     }
 
-    ~header() {
+    ~ram_header() {
       delete mtx;
     }
 };
 
-class entry{ 
+
+
+const int ram_cardinality = (RAM_PAGESIZE-sizeof(ram_header))/sizeof(ram_entry);
+const int ram_count_in_line = RAM_CACHE_LINE_SIZE / sizeof(ram_entry);
+
+class ram_node{
   private:
-    entry_key_t key; // 8 bytes
-    char* ptr; // 8 bytes
-
-  public:
-    entry(){
-      key = entry_key_t(ULONG_MAX);
-      ptr = NULL;
-    }
-
-    friend class bpnode;
-    friend class btree;
-};
-
-const int cardinality = (PAGESIZE-sizeof(header))/sizeof(entry);
-const int count_in_line = CACHE_LINE_SIZE / sizeof(entry);
-
-class bpnode{
-  private:
-    header hdr;  // header in persistent memory, 16 bytes
-    entry records[cardinality]; // slots in persistent memory, 16 bytes * n
+    ram_header hdr;  // ram_header in persistent memory, 16 bytes
+    ram_entry records[ram_cardinality]; // slots in persistent memory, 16 bytes * n
 
 
   public:
-    friend class btree;
+    friend class ram_tree;
 
-    bpnode(uint32_t level = 0) {
+    ram_node(uint32_t level = 0) {
       hdr.level = level;
       records[0].ptr = NULL;
     }
 
     // this is called when tree grows
-    bpnode(bpnode* left, entry_key_t key, bpnode* right, uint32_t level = 0) {
+    ram_node(ram_node* left, ram_entry_key_t key, ram_node* right, uint32_t level = 0) {
       hdr.leftmost_ptr = left;  
       hdr.level = level;
       records[0].key = key;
@@ -354,7 +299,7 @@ class bpnode{
 
       hdr.last_index = 0;
 
-      clflush((char*)this, sizeof(bpnode));
+      // clflush((char*)this, sizeof(ram_node));
     }
 
     // void *operator new(size_t size) {
@@ -367,7 +312,7 @@ class bpnode{
       return hdr.level;
     }
     
-    void linear_search_range(entry_key_t min, entry_key_t max, std::vector<std::string> &values, int &size);
+    void linear_search_range(ram_entry_key_t min, ram_entry_key_t max, std::vector<std::string> &values, int &size);
     inline int count() {
       uint8_t previous_switch_counter;
       int count = 0;
@@ -376,7 +321,7 @@ class bpnode{
         count = hdr.last_index + 1;
 
         while(count >= 0 && records[count].ptr != NULL) {
-          if(IS_FORWARD(previous_switch_counter))
+          if(RAM_IS_FORWARD(previous_switch_counter))
             ++count;
           else
             --count;
@@ -394,9 +339,9 @@ class bpnode{
       return count;
     }
 
-    inline bool remove_key(entry_key_t key) {
+    inline bool remove_key(ram_entry_key_t key) {
       // Set the switch_counter
-      if(IS_FORWARD(hdr.switch_counter)) 
+      if(RAM_IS_FORWARD(hdr.switch_counter)) 
         ++hdr.switch_counter;
 
       bool shift = false;
@@ -411,27 +356,16 @@ class bpnode{
         if(shift) {
           records[i].key = records[i + 1].key;
           records[i].ptr = records[i + 1].ptr;
-
-          // flush
-          uint64_t records_ptr = (uint64_t)(&records[i]);
-          int remainder = records_ptr % CACHE_LINE_SIZE;
-          bool do_flush = (remainder == 0) || 
-            ((((int)(remainder + sizeof(entry)) / CACHE_LINE_SIZE) == 1) && 
-             ((remainder + sizeof(entry)) % CACHE_LINE_SIZE) != 0);
-          if(do_flush) {
-            clflush((char *)records_ptr, CACHE_LINE_SIZE);
-          }
         }
       }
 
       if(shift) {
         --hdr.last_index;
-        clflush((char *)&(hdr.last_index), sizeof(int16_t));
       }
       return shift;
     }
 
-    bool remove(btree* bt, entry_key_t key, bool only_rebalance = false, bool with_lock = true) {
+    bool remove(ram_tree* bt, ram_entry_key_t key, bool only_rebalance = false, bool with_lock = true) {
       hdr.mtx->lock();
 
       bool ret = remove_key(key);
@@ -448,7 +382,7 @@ class bpnode{
      * Making B+-tree efficient in PCM-based main memory. In Proceedings of the 2014
      * international symposium on Low power electronics and design (pp. 69-74). ACM.
      */
-    bool remove_rebalancing(btree* bt, entry_key_t key, bool only_rebalance = false, bool with_lock = true) {
+    bool remove_rebalancing(ram_tree* bt, ram_entry_key_t key, bool only_rebalance = false, bool with_lock = true) {
       if(with_lock) {
         hdr.mtx->lock();
       }
@@ -463,14 +397,12 @@ class bpnode{
         register int num_entries_before = count();
 
         // This node is root
-        if(this == (bpnode *)bt->root) {
+        if(this == (ram_node *)bt->root) {
           if(hdr.level > 0) {
             if(num_entries_before == 1 && !hdr.sibling_ptr) {
               bt->root = (char *)hdr.leftmost_ptr;
-              clflush((char *)&(bt->root), sizeof(char *));
 
               hdr.is_deleted = 1;
-              clflush((char *)&(hdr.is_deleted), sizeof(uint8_t));
             }
           }
 
@@ -485,7 +417,7 @@ class bpnode{
 
         bool should_rebalance = true;
         // check the node utilization
-        if(num_entries_before - 1 >= (int)((cardinality - 1) * 0.5)) { 
+        if(num_entries_before - 1 >= (int)((ram_cardinality - 1) * 0.5)) { 
           should_rebalance = false;
         }
 
@@ -501,9 +433,9 @@ class bpnode{
       } 
 
       //Remove a key from the parent node
-      entry_key_t deleted_key_from_parent = 0;
+      ram_entry_key_t deleted_key_from_parent = 0;
       bool is_leftmost_node = false;
-      bpnode *left_sibling;
+      ram_node *left_sibling;
       bt->btree_delete_internal(key, (char *)this, hdr.level + 1,
           &deleted_key_from_parent, &is_leftmost_node, &left_sibling);
 
@@ -528,7 +460,7 @@ class bpnode{
 
       while(left_sibling->hdr.sibling_ptr != this) {
         if(with_lock) {
-          bpnode *t = left_sibling->hdr.sibling_ptr;
+          ram_node *t = left_sibling->hdr.sibling_ptr;
           left_sibling->hdr.mtx->unlock();
           left_sibling = t;
           left_sibling->hdr.mtx->lock();
@@ -545,9 +477,9 @@ class bpnode{
       if(hdr.leftmost_ptr)
         ++total_num_entries;
 
-      entry_key_t parent_key;
+      ram_entry_key_t parent_key;
 
-      if(total_num_entries > cardinality - 1) { // Redistribution
+      if(total_num_entries > ram_cardinality - 1) { // Redistribution
         register int m = (int) ceil(total_num_entries / 2);
 
         if(num_entries < left_num_entries) { // left -> right
@@ -558,10 +490,8 @@ class bpnode{
             } 
 
             left_sibling->records[m].ptr = nullptr;
-            clflush((char *)&(left_sibling->records[m].ptr), sizeof(char *));
 
             left_sibling->hdr.last_index = m - 1;
-            clflush((char *)&(left_sibling->hdr.last_index), sizeof(int16_t));
 
             parent_key = records[0].key; 
           }
@@ -576,18 +506,18 @@ class bpnode{
 
             parent_key = left_sibling->records[m].key; 
 
-            hdr.leftmost_ptr = (bpnode*)left_sibling->records[m].ptr; 
-            clflush((char *)&(hdr.leftmost_ptr), sizeof(bpnode *));
+            hdr.leftmost_ptr = (ram_node*)left_sibling->records[m].ptr; 
+            // clflush((char *)&(hdr.leftmost_ptr), sizeof(ram_node *));
 
             left_sibling->records[m].ptr = nullptr;
-            clflush((char *)&(left_sibling->records[m].ptr), sizeof(char *));
+            // clflush((char *)&(left_sibling->records[m].ptr), sizeof(char *));
 
             left_sibling->hdr.last_index = m - 1;
-            clflush((char *)&(left_sibling->hdr.last_index), sizeof(int16_t));
+            // clflush((char *)&(left_sibling->hdr.last_index), sizeof(int16_t));
           }
 
-          if(left_sibling == ((bpnode *)bt->root)) {
-            bpnode* new_root = new (bt->NewBpNode()) bpnode(left_sibling, parent_key, this, hdr.level + 1);
+          if(left_sibling == ((ram_node *)bt->root)) {
+            ram_node* new_root = new (bt->Newram_node()) ram_node(left_sibling, parent_key, this, hdr.level + 1);
             bt->setNewRoot((char *)new_root);
           }
           else {
@@ -597,9 +527,9 @@ class bpnode{
         }
         else{ // from leftmost case
           hdr.is_deleted = 1;
-          clflush((char *)&(hdr.is_deleted), sizeof(uint8_t));
+          // clflush((char *)&(hdr.is_deleted), sizeof(uint8_t));
 
-          bpnode* new_sibling = new (bt->NewBpNode()) bpnode(hdr.level); 
+          ram_node* new_sibling = new (bt->Newram_node()) ram_node(hdr.level); 
           new_sibling->hdr.mtx->lock();
           new_sibling->hdr.sibling_ptr = hdr.sibling_ptr;
 
@@ -617,10 +547,10 @@ class bpnode{
                   &new_sibling_cnt, false); 
             } 
 
-            clflush((char *)(new_sibling), sizeof(bpnode));
+            // clflush((char *)(new_sibling), sizeof(ram_node));
 
             left_sibling->hdr.sibling_ptr = new_sibling;
-            clflush((char *)&(left_sibling->hdr.sibling_ptr), sizeof(bpnode *));
+            // clflush((char *)&(left_sibling->hdr.sibling_ptr), sizeof(ram_node *));
 
             parent_key = new_sibling->records[0].key; 
           }
@@ -635,19 +565,19 @@ class bpnode{
 
             parent_key = records[num_dist_entries - 1].key;
 
-            new_sibling->hdr.leftmost_ptr = (bpnode*)records[num_dist_entries - 1].ptr;
+            new_sibling->hdr.leftmost_ptr = (ram_node*)records[num_dist_entries - 1].ptr;
             for(int i=num_dist_entries; records[i].ptr != NULL; i++){
               new_sibling->insert_key(records[i].key, records[i].ptr,
                   &new_sibling_cnt, false); 
             } 
-            clflush((char *)(new_sibling), sizeof(bpnode));
+            // clflush((char *)(new_sibling), sizeof(ram_node));
 
             left_sibling->hdr.sibling_ptr = new_sibling;
-            clflush((char *)&(left_sibling->hdr.sibling_ptr), sizeof(bpnode *));
+            // clflush((char *)&(left_sibling->hdr.sibling_ptr), sizeof(ram_node *));
           }
 
-          if(left_sibling == ((bpnode *)bt->root)) {
-            bpnode* new_root = new (bt->NewBpNode()) bpnode(left_sibling, parent_key, new_sibling, hdr.level + 1);
+          if(left_sibling == ((ram_node *)bt->root)) {
+            ram_node* new_root = new (bt->Newram_node()) ram_node(left_sibling, parent_key, new_sibling, hdr.level + 1);
             bt->setNewRoot((char *)new_root);
           }
           else {
@@ -660,7 +590,7 @@ class bpnode{
       }
       else {
         hdr.is_deleted = 1;
-        clflush((char *)&(hdr.is_deleted), sizeof(uint8_t));
+        // clflush((char *)&(hdr.is_deleted), sizeof(uint8_t));
 
         if(hdr.leftmost_ptr)
           left_sibling->insert_key(deleted_key_from_parent, 
@@ -671,7 +601,7 @@ class bpnode{
         }
 
         left_sibling->hdr.sibling_ptr = hdr.sibling_ptr;
-        clflush((char *)&(left_sibling->hdr.sibling_ptr), sizeof(bpnode *));
+        // clflush((char *)&(left_sibling->hdr.sibling_ptr), sizeof(ram_node *));
       }
 
       if(with_lock) {
@@ -683,61 +613,38 @@ class bpnode{
     }
 
     inline void 
-      insert_key(entry_key_t key, char* ptr, int *num_entries, bool flush = true,
+      insert_key(ram_entry_key_t key, char* ptr, int *num_entries, bool flush = true,
           bool update_last_index = true) {
         // update switch_counter
-        if(!IS_FORWARD(hdr.switch_counter))
+        if(!RAM_IS_FORWARD(hdr.switch_counter))
           ++hdr.switch_counter;
 
         // FAST
-        if(*num_entries == 0) {  // this bpnode is empty
-          entry* new_entry = (entry*) &records[0];
-          entry* array_end = (entry*) &records[1];
-          new_entry->key = (entry_key_t) key;
+        if(*num_entries == 0) {  // this ram_node is empty
+          ram_entry* new_entry = (ram_entry*) &records[0];
+          ram_entry* array_end = (ram_entry*) &records[1];
+          new_entry->key = (ram_entry_key_t) key;
           new_entry->ptr = (char*) ptr;
 
           array_end->ptr = (char*)NULL;
-
-          if(flush) {
-            clflush((char*) this, CACHE_LINE_SIZE);
-          }
         }
         else {
           int i = *num_entries - 1, inserted = 0, to_flush_cnt = 0;
           records[*num_entries+1].ptr = records[*num_entries].ptr; 
-          if(flush) {
-            if((uint64_t)&(records[*num_entries+1].ptr) % CACHE_LINE_SIZE == 0) 
-              clflush((char*)&(records[*num_entries+1].ptr), sizeof(char*));
-          }
 
           // FAST
           for(i = *num_entries - 1; i >= 0; i--) {
             if(key < records[i].key ) {
               records[i+1].ptr = records[i].ptr;
               records[i+1].key = records[i].key;
-
-              if(flush) {
-                uint64_t records_ptr = (uint64_t)(&records[i+1]);
-
-                int remainder = records_ptr % CACHE_LINE_SIZE;
-                bool do_flush = (remainder == 0) || 
-                  ((((int)(remainder + sizeof(entry)) / CACHE_LINE_SIZE) == 1) 
-                   && ((remainder+sizeof(entry))%CACHE_LINE_SIZE)!=0);
-                if(do_flush) {
-                  clflush((char*)records_ptr,CACHE_LINE_SIZE);
-                  to_flush_cnt = 0;
-                }
-                else
-                  ++to_flush_cnt;
-              }
             }
             else{
               records[i+1].ptr = records[i].ptr;
               records[i+1].key = key;
               records[i+1].ptr = ptr;
 
-              if(flush)
-                clflush((char*)&records[i+1],sizeof(entry));
+              // if(flush)
+                // clflush((char*)&records[i+1],sizeof(ram_entry));
               inserted = 1;
               break;
             }
@@ -746,22 +653,22 @@ class bpnode{
             records[0].ptr =(char*) hdr.leftmost_ptr;
             records[0].key = key;
             records[0].ptr = ptr;
-            if(flush)
-              clflush((char*) &records[0], sizeof(entry)); 
+            // if(flush)
+              // clflush((char*) &records[0], sizeof(ram_entry)); 
           }
         }
 
         if(update_last_index) {
           hdr.last_index = *num_entries;
-          clflush((char *)&(hdr.last_index), sizeof(int16_t));
+          // clflush((char *)&(hdr.last_index), sizeof(int16_t));
         }
         ++(*num_entries);
       }
 
     // Insert a new key - FAST and FAIR
-    bpnode *store
-      (btree* bt, char* left, entry_key_t key, char* right,
-       bool flush, bool with_lock, bpnode *invalid_sibling = NULL) {
+    ram_node *store
+      (ram_tree* bt, char* left, ram_entry_key_t key, char* right,
+       bool flush, bool with_lock, ram_node *invalid_sibling = NULL) {
         if(with_lock) {
           hdr.mtx->lock(); // Lock the write lock
         }
@@ -788,7 +695,7 @@ class bpnode{
         register int num_entries = count();
 
         // FAST
-        if(num_entries < cardinality - 1) {
+        if(num_entries < ram_cardinality - 1) {
           insert_key(key, right, &num_entries, flush);
 
           if(with_lock) {
@@ -800,9 +707,9 @@ class bpnode{
         else {// FAIR
           // overflow
           // create a new node
-          bpnode* sibling = new (bt->NewBpNode()) bpnode(hdr.level); 
+          ram_node* sibling = new (bt->Newram_node()) ram_node(hdr.level); 
           register int m = (int) ceil(num_entries/2);
-          entry_key_t split_key = records[m].key;
+          ram_entry_key_t split_key = records[m].key;
 
           // migrate half of keys into the sibling
           int sibling_cnt = 0;
@@ -815,29 +722,29 @@ class bpnode{
             for(int i=m+1;i<num_entries;++i){ 
               sibling->insert_key(records[i].key, records[i].ptr, &sibling_cnt, false);
             }
-            sibling->hdr.leftmost_ptr = (bpnode*) records[m].ptr;
+            sibling->hdr.leftmost_ptr = (ram_node*) records[m].ptr;
           }
 
           sibling->hdr.sibling_ptr = hdr.sibling_ptr;
-          clflush((char *)sibling, sizeof(bpnode));
+          // clflush((char *)sibling, sizeof(ram_node));
 
           hdr.sibling_ptr = sibling;
-          clflush((char*) &hdr, sizeof(hdr));
+          // clflush((char*) &hdr, sizeof(hdr));
 
           // set to NULL
-          if(IS_FORWARD(hdr.switch_counter))
+          if(RAM_IS_FORWARD(hdr.switch_counter))
             hdr.switch_counter += 2;
           else
             ++hdr.switch_counter;
           records[m].ptr = NULL;
-          clflush((char*) &records[m], sizeof(entry));
+          // clflush((char*) &records[m], sizeof(ram_entry));
 
           hdr.last_index = m - 1;
-          clflush((char *)&(hdr.last_index), sizeof(int16_t));
+          // clflush((char *)&(hdr.last_index), sizeof(int16_t));
 
           num_entries = hdr.last_index + 1;
 
-          bpnode *ret;
+          ram_node *ret;
 
           // insert the key
           if(key < split_key) {
@@ -851,7 +758,7 @@ class bpnode{
 
           // Set a new root or insert the split key to the parent
           if(bt->root == (char *)this) { // only one node can update the root ptr
-            bpnode* new_root = new (bt->NewBpNode()) bpnode((bpnode*)this, split_key, sibling, 
+            ram_node* new_root = new (bt->Newram_node()) ram_node((ram_node*)this, split_key, sibling, 
                 hdr.level + 1);
             bt->setNewRoot((char *)new_root);
 
@@ -874,10 +781,10 @@ class bpnode{
 
     // Search keys with linear search
     void linear_search_range
-      (entry_key_t min, entry_key_t max, unsigned long *buf) {
+      (ram_entry_key_t min, ram_entry_key_t max, unsigned long *buf) {
         int i, off = 0;
         uint8_t previous_switch_counter;
-        bpnode *current = this;
+        ram_node *current = this;
 
         while(current) {
           int old_off = off;
@@ -885,10 +792,10 @@ class bpnode{
             previous_switch_counter = current->hdr.switch_counter;
             off = old_off;
 
-            entry_key_t tmp_key;
+            ram_entry_key_t tmp_key;
             char *tmp_ptr;
 
-            if(IS_FORWARD(previous_switch_counter)) {
+            if(RAM_IS_FORWARD(previous_switch_counter)) {
               if((tmp_key = current->records[0].key) > min) {
                 if(tmp_key < max) {
                   if((tmp_ptr = current->records[0].ptr) != NULL) {
@@ -954,12 +861,13 @@ class bpnode{
         }
       }
 
-    char *linear_search(entry_key_t key) {
+    char *linear_search(ram_entry_key_t key) {
       int i = 1;
       uint8_t previous_switch_counter;
       char *ret = NULL;
       char *t; 
-      entry_key_t k;
+      ram_entry_key_t k;
+      ram_entry *find_entry = NULL;
 
       if(hdr.leftmost_ptr == NULL) { // Search a leaf node
         do {
@@ -967,11 +875,12 @@ class bpnode{
           ret = NULL;
 
           // search from left ro right
-          if(IS_FORWARD(previous_switch_counter)) { 
+          if(RAM_IS_FORWARD(previous_switch_counter)) { 
             if((k = records[0].key) == key) {
               if((t = records[0].ptr) != NULL) {
                 if(k == records[0].key) {
                   ret = t;
+                  find_entry = &records[0];
                   continue;
                 }
               }
@@ -981,6 +890,7 @@ class bpnode{
               if((k = records[i].key) == key) {
                 if(records[i-1].ptr != (t = records[i].ptr)) {
                   if(k == records[i].key) {
+                    find_entry = &records[i];
                     ret = t;
                     break;
                   }
@@ -993,6 +903,7 @@ class bpnode{
               if((k = records[i].key) == key) {
                 if(records[i - 1].ptr != (t = records[i].ptr) && t) {
                   if(k == records[i].key) {
+                    find_entry = &records[i];
                     ret = t;
                     break;
                   }
@@ -1004,6 +915,7 @@ class bpnode{
               if((k = records[0].key) == key) {
                 if(NULL != (t = records[0].ptr) && t) {
                   if(k == records[0].key) {
+                    find_entry = &records[0];
                     ret = t;
                     continue;
                   }
@@ -1013,11 +925,12 @@ class bpnode{
           }
         } while(hdr.switch_counter != previous_switch_counter);
 
+        if(find_entry) find_entry->key.hot++;
         if(ret) {
           return ret;
         }
 
-        if((t = (char *)hdr.sibling_ptr) && key >= ((bpnode *)t)->records[0].key)
+        if((t = (char *)hdr.sibling_ptr) && key >= ((ram_node *)t)->records[0].key)
           return t;
 
         return NULL;
@@ -1027,7 +940,7 @@ class bpnode{
           previous_switch_counter = hdr.switch_counter;
           ret = NULL;
 
-          if(IS_FORWARD(previous_switch_counter)) {
+          if(RAM_IS_FORWARD(previous_switch_counter)) {
             if(key < (k = records[0].key)) {
               if((t = (char *)hdr.leftmost_ptr) != records[0].ptr) { 
                 ret = t;
@@ -1070,7 +983,7 @@ class bpnode{
         } while(hdr.switch_counter != previous_switch_counter);
 
         if((t = (char *)hdr.sibling_ptr) != NULL) {
-          if(key >= ((bpnode *)t)->records[0].key)
+          if(key >= ((ram_node *)t)->records[0].key)
             return t;
         }
 
@@ -1093,7 +1006,7 @@ class bpnode{
       printf("last_index: %d\n", hdr.last_index);
       printf("switch_counter: %d\n", hdr.switch_counter);
       printf("search direction: ");
-      if(IS_FORWARD(hdr.switch_counter))
+      if(RAM_IS_FORWARD(hdr.switch_counter))
         printf("->\n");
       else
         printf("<-\n");
@@ -1117,22 +1030,22 @@ class bpnode{
       else {
         printf("printing internal node: ");
         print();
-        ((bpnode*) hdr.leftmost_ptr)->printAll();
+        ((ram_node*) hdr.leftmost_ptr)->printAll();
         for(int i=0;records[i].ptr != NULL;++i){
-          ((bpnode*) records[i].ptr)->printAll();
+          ((ram_node*) records[i].ptr)->printAll();
         }
       }
     }
 
     void CalculateSapce(uint64_t &space) {
       if(hdr.leftmost_ptr==NULL) {
-        space += PAGESIZE;
+        space += RAM_PAGESIZE;
       }
       else {
-        space += PAGESIZE;
-        ((bpnode*) hdr.leftmost_ptr)->CalculateSapce(space);
+        space += RAM_PAGESIZE;
+        ((ram_node*) hdr.leftmost_ptr)->CalculateSapce(space);
         for(int i=0;records[i].ptr != NULL;++i){
-          ((bpnode*) records[i].ptr)->CalculateSapce(space);
+          ((ram_node*) records[i].ptr)->CalculateSapce(space);
         }
       }
     }

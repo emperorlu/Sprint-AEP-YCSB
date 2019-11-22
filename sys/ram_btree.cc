@@ -1,17 +1,17 @@
 
-#include "con_btree.h"
+#include "ram_btree.h"
 
-pthread_mutex_t print_mtx;
+pthread_mutex_t ram_print_mtx;
 
 
 /*
- * class btree
+ * class ram_tree
  */
 
-void bpnode::linear_search_range(entry_key_t min, entry_key_t max, std::vector<std::string> &values, int &size) {
+void ram_node::linear_search_range(ram_entry_key_t min, ram_entry_key_t max, std::vector<std::string> &values, int &size) {
     int i, off = 0;
     uint8_t previous_switch_counter;
-    bpnode *current = this;
+    ram_node *current = this;
 
     while(current) {
         int old_off = off;
@@ -19,10 +19,10 @@ void bpnode::linear_search_range(entry_key_t min, entry_key_t max, std::vector<s
             previous_switch_counter = current->hdr.switch_counter;
             off = old_off;
 
-            entry_key_t tmp_key;
+            ram_entry_key_t tmp_key;
             char *tmp_ptr;
 
-            if(IS_FORWARD(previous_switch_counter)) {
+            if(RAM_IS_FORWARD(previous_switch_counter)) {
                 if((tmp_key = current->records[0].key) > min) {
                     if(tmp_key < max) {
                         if((tmp_ptr = current->records[0].ptr) != NULL) {
@@ -119,86 +119,54 @@ void bpnode::linear_search_range(entry_key_t min, entry_key_t max, std::vector<s
     size = off;
 }
 
-btree::btree(){
+ram_tree::ram_tree(){
   // root = (char*)new bpnode();
-  HCrchain = new CONRangChain;
-  // Cache = new CashTable(10000000);
   height = 1;
   node_alloc = nullptr;
-}
-
-// void btree::chain_insert(entry_key_t key){
-//   HCrchain->insert(key);
-// }
-
-void btree::btree_updakey(entry_key_t key){
-  // Cache->insert(key);
-  HCrchain->insert(key);
-}
-
-static long bcak_count = 0;
-vector<entry_key_t> btree::btree_back(int hot, size_t read){
-  vector<entry_key_t> dlist;
-  bcak_count++;
-  // cout << "begin " << bcak_count << " back" << endl; 
-  for(int i = HCrchain->theLists.size()-1; i >= 0; i--)
-  {
-    typename list<entry_key_t>::iterator itr = HCrchain->theLists[i].begin();
-    while(itr != HCrchain->theLists[i].end()){
-      if((*itr).hot < hot){
-        return dlist;
-      }
-      dlist.push_back((*itr));
-      itr = HCrchain->theLists[i].erase(itr);
-      if (dlist.size() >= read)
-        return dlist; 
-    }
-  }
-  return dlist;
+  HCrchain = new RamChain;
 }
 
 
-
-void* btree::NewBpNode() {
-    return node_alloc->Allocate(sizeof(bpnode));
+void* ram_tree::Newram_node() {
+    return new ram_node();
 }
 
-void btree::btree_init(const std::string &path, uint64_t keysize) {
-      node_alloc = new NVMAllocator(path, keysize);
-      if(node_alloc == nullptr) {
-          exit(0);
-      }
-      root = (char*)(new (NewBpNode()) bpnode());
+void ram_tree::btree_init() {
+      // node_alloc = new NVMAllocator(path, keysize);
+      // if(node_alloc == nullptr) {
+      //     exit(0);
+      // }
+      root = (char*)(new (Newram_node()) ram_node());
 }
 
-// btree::btree(bpnode *root_) {
+// ram_tree::ram_tree(ram_node *root_) {
 //     // if()
 //     if(root_ == nullptr) {
-//         root = (char*)new bpnode();
+//         root = (char*)new ram_node();
 //         height = 1;
 //     } else {
 //         root = (char *)root_;
 //         height = root_->GetLevel() + 1;
 //     }
 //     // node_alloc = nullptr;
-//     print_log(LV_DEBUG, "root is %p, btree is %p, height is %d", root, this, height);
+//     print_log(LV_DEBUG, "root is %p, ram_tree is %p, height is %d", root, this, height);
 // }
 
-void btree::setNewRoot(char *new_root) {
+void ram_tree::setNewRoot(char *new_root) {
   this->root = (char*)new_root;
-  clflush((char*)&(this->root),sizeof(char*));
+  // clflush((char*)&(this->root),sizeof(char*));
   ++height;
 }
 
-char *btree::btree_search(entry_key_t key){
-  bpnode* p = (bpnode*)root;
+char *ram_tree::btree_search(ram_entry_key_t key){
+  ram_node* p = (ram_node*)root;
 
   while(p->hdr.leftmost_ptr != NULL) {
-    p = (bpnode *)p->linear_search(key);
+    p = (ram_node *)p->linear_search(key);
   }
 
-  bpnode *t;
-  while((t = (bpnode *)p->linear_search(key)) == p->hdr.sibling_ptr) {
+  ram_node *t;
+  while((t = (ram_node *)p->linear_search(key)) == p->hdr.sibling_ptr) {
     p = t;
     if(!p) {
       break;
@@ -214,11 +182,11 @@ char *btree::btree_search(entry_key_t key){
 }
 
 // insert the key in the leaf node
-void btree::btree_insert(entry_key_t key, char* right){ //need to be string
-  bpnode* p = (bpnode*)root;
+void ram_tree::btree_insert(ram_entry_key_t key, char* right){ //need to be string
+  ram_node* p = (ram_node*)root;
 
   while(p->hdr.leftmost_ptr != NULL) {
-    p = (bpnode*)p->linear_search(key);
+    p = (ram_node*)p->linear_search(key);
   }
 
   if(!p->store(this, NULL, key, right, true, true)) { // store 
@@ -227,30 +195,30 @@ void btree::btree_insert(entry_key_t key, char* right){ //need to be string
 }
 
 // store the key into the node at the given level 
-void btree::btree_insert_internal
-(char *left, entry_key_t key, char *right, uint32_t level) {
-  if(level > ((bpnode *)root)->hdr.level)
+void ram_tree::btree_insert_internal
+(char *left, ram_entry_key_t key, char *right, uint32_t level) {
+  if(level > ((ram_node *)root)->hdr.level)
     return;
 
-  bpnode *p = (bpnode *)this->root;
+  ram_node *p = (ram_node *)this->root;
 
   while(p->hdr.level > level) 
-    p = (bpnode *)p->linear_search(key);
+    p = (ram_node *)p->linear_search(key);
 
   if(!p->store(this, NULL, key, right, true, true)) {
     btree_insert_internal(left, key, right, level);
   }
 }
 
-void btree::btree_delete(entry_key_t key) {
-  bpnode* p = (bpnode*)root;
+void ram_tree::btree_delete(ram_entry_key_t key) {
+  ram_node* p = (ram_node*)root;
 
   while(p->hdr.leftmost_ptr != NULL){
-    p = (bpnode*) p->linear_search(key);
+    p = (ram_node*) p->linear_search(key);
   }
 
-  bpnode *t;
-  while((t = (bpnode *)p->linear_search(key)) == p->hdr.sibling_ptr) {
+  ram_node *t;
+  while((t = (ram_node *)p->linear_search(key)) == p->hdr.sibling_ptr) {
     p = t;
     if(!p)
       break;
@@ -267,15 +235,15 @@ void btree::btree_delete(entry_key_t key) {
   }
 }
 
-void btree::btree_delete_internal(entry_key_t key, char *ptr, uint32_t level, entry_key_t *deleted_key, 
- bool *is_leftmost_node, bpnode **left_sibling) {
-  if(level > ((bpnode *)this->root)->hdr.level)
+void ram_tree::btree_delete_internal(ram_entry_key_t key, char *ptr, uint32_t level, ram_entry_key_t *deleted_key, 
+ bool *is_leftmost_node, ram_node **left_sibling) {
+  if(level > ((ram_node *)this->root)->hdr.level)
     return;
 
-  bpnode *p = (bpnode *)this->root;
+  ram_node *p = (ram_node *)this->root;
 
   while(p->hdr.level > level) {
-    p = (bpnode *)p->linear_search(key);
+    p = (ram_node *)p->linear_search(key);
   }
 
   p->hdr.mtx->lock();
@@ -301,7 +269,7 @@ void btree::btree_delete_internal(entry_key_t key, char *ptr, uint32_t level, en
       else {
         if(p->records[i - 1].ptr != p->records[i].ptr) {
           *deleted_key = p->records[i].key;
-          *left_sibling = (bpnode *)p->records[i - 1].ptr;
+          *left_sibling = (ram_node *)p->records[i - 1].ptr;
           p->remove(this, *deleted_key, false, false);
           break;
         }
@@ -313,13 +281,13 @@ void btree::btree_delete_internal(entry_key_t key, char *ptr, uint32_t level, en
 }
 
 // Function to search keys from "min" to "max"
-void btree::btree_search_range(entry_key_t min, entry_key_t max, unsigned long *buf) {
-  bpnode *p = (bpnode *)root;
+void ram_tree::btree_search_range(ram_entry_key_t min, ram_entry_key_t max, unsigned long *buf) {
+  ram_node *p = (ram_node *)root;
 
   while(p) {
     if(p->hdr.leftmost_ptr != NULL) {
-      // The current bpnode is internal
-      p = (bpnode *)p->linear_search(min);
+      // The current ram_node is internal
+      p = (ram_node *)p->linear_search(min);
     }
     else {
       // Found a leaf
@@ -330,14 +298,14 @@ void btree::btree_search_range(entry_key_t min, entry_key_t max, unsigned long *
   }
 }
 
-void btree::btree_search_range(entry_key_t min, entry_key_t max, 
+void ram_tree::btree_search_range(ram_entry_key_t min, ram_entry_key_t max, 
         std::vector<std::string> &values, int &size) {
-    bpnode *p = (bpnode *)root;
+    ram_node *p = (ram_node *)root;
 
     while(p) {
         if(p->hdr.leftmost_ptr != NULL) {
-        // The current bpnode is internal
-        p = (bpnode *)p->linear_search(min);
+        // The current ram_node is internal
+        p = (ram_node *)p->linear_search(min);
         }
         else {
         // Found a leaf
@@ -348,13 +316,13 @@ void btree::btree_search_range(entry_key_t min, entry_key_t max,
     }
 }
 
-void btree::printAll(){
-  pthread_mutex_lock(&print_mtx);
+void ram_tree::printAll(){
+  pthread_mutex_lock(&ram_print_mtx);
   int total_keys = 0;
-  bpnode *leftmost = (bpnode *)root;
+  ram_node *leftmost = (ram_node *)root;
   printf("root: %x\n", root);
   do {
-    bpnode *sibling = leftmost;
+    ram_node *sibling = leftmost;
     while(sibling) {
       if(sibling->hdr.level == 0) {
         total_keys += sibling->hdr.last_index + 1;
@@ -367,30 +335,58 @@ void btree::printAll(){
   } while(leftmost);
 
   printf("total number of keys: %d\n", total_keys);
-  pthread_mutex_unlock(&print_mtx);
+  pthread_mutex_unlock(&ram_print_mtx);
 }
 
-// void btree::for_each() {
-//   bpnode *node = (bpnode *)root;
-//   while(node->hdr.leftmost_ptr) {
-//     node = node->hdr.leftmost_ptr;
-//   }
-//   while(node) {
-//     // hhjbkjkjj
-//     node = node->hdr.sibling_ptr;
-//   }
-// }
+vector<ram_entry> ram_tree::range_leafs(){
+  vector<ram_entry> dlist;
+  ram_node *sibling = (ram_node *)root;
+  int i;
+  while(sibling->hdr.leftmost_ptr != NULL) {
+    sibling = sibling->hdr.leftmost_ptr;
+  }
+
+  while(sibling) {
+    for(i = 0; sibling->records[i].ptr != NULL;i++){
+      if(sibling->records[i].key.flag == 0){
+          sibling->records[i].key.flag = 1;
+          HCrchain->insert(sibling->records[i].key);
+          dlist.push_back(sibling->records[i]);
+      }
+    }
+    sibling = sibling->hdr.sibling_ptr;
+  }
+  return dlist;
+}
+
+vector<ram_entry_key_t> ram_tree::btree_out(size_t out){
+    vector<ram_entry_key_t> dlist;
+    // cout << "begin btree_out!" << endl;
+    for(int i = 0; i < HCrchain->theLists.size(); i++)
+    {
+      typename list<ram_entry_key_t>::iterator itr = HCrchain->theLists[i].begin();
+      while(itr != HCrchain->theLists[i].end()){
+          dlist.push_back((*itr));
+          btree_delete(*itr);
+          if (dlist.size() >= out)
+            return dlist;
+          itr++;
+      }
+    }
+    // cout << "end btree_out!" << endl;
+    return dlist;
+}
 
 
-void btree::CalculateSapce(uint64_t &space) {
+void ram_tree::CalculateSapce(uint64_t &space) {
     if(root != nullptr) {
-        ((bpnode*)root)->CalculateSapce(space);
+        ((ram_node*)root)->CalculateSapce(space);
     }
 }
 
 
-void btree::PrintInfo() {
+void ram_tree::PrintInfo() {
     printf("This is a b+ tree.\n");
-    printf("Node size is %lu, M path is %d.\n", sizeof(bpnode), cardinality);
+    printf("Node size is %lu, M path is %d.\n", sizeof(ram_node), ram_cardinality);
     printf("Tree height is %d.\n", height);
 }

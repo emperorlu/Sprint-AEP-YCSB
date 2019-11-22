@@ -1,22 +1,21 @@
-#include "dram_nvmbptree.h"
+#include "nvmbptree.h"
 #include <assert.h>
 #include <cmath>
-#include<string.h>
 
 namespace rocksdb{
-    int  DrBpPrintCount_ = 0;
-    int  DrBpTreeLevel_ = 0;
-    // PersistentAllocator* BpNodeNVMAllocator_;
-    PersistentAllocator* DrBpValueNVMAllocator_;
-    Statistic DrbpStats;
+    int  BpPrintCount_ = 0;
+    int  BpTreeLevel_ = 0;
+    PersistentAllocator* BpNodeNVMAllocator_;
+    PersistentAllocator* BpValueNVMAllocator_;
+    Statistic bpStats;
 
 //****************************************/
 //*B+树节点结构实现
 //****************************************/
 
-void BpNode::InsertAtLeaf(string key, string value)
+void NVMBpNode::InsertAtLeaf(string key, string value)
 {
-    assert(m_currentSize < DrNVMBp_NODE_CAPACITY);
+    assert(m_currentSize < NVMBp_NODE_CAPACITY);
     int i;
     if(m_currentSize == 0) {
         SetKey(m_currentSize, key.c_str());
@@ -26,6 +25,7 @@ void BpNode::InsertAtLeaf(string key, string value)
     for (i = 0; i < m_currentSize; ++i)
     {
         int res = memcmp(key.c_str(), m_key[i], NVM_KeySize);
+        bpStats.add_node_search();    
         if (res <= 0) //找到插入点
         {
            break;
@@ -43,10 +43,10 @@ void BpNode::InsertAtLeaf(string key, string value)
     SetCurrentSize(m_currentSize + 1);
 }
 
-void BpNode::InsertIndex(string key, BpNode *_pointer)
+void NVMBpNode::InsertIndex(string key, NVMBpNode *_pointer)
 {
     int i;
-    assert(m_currentSize < DrNVMBp_NODE_CAPACITY);
+    assert(m_currentSize < NVMBp_NODE_CAPACITY);
 
     if(m_currentSize == 0) {
         SetKey(m_currentSize, key.c_str());
@@ -56,6 +56,7 @@ void BpNode::InsertIndex(string key, BpNode *_pointer)
     }
     for (i = 0; i < m_currentSize; ++i)
     {
+        bpStats.add_node_search();
         int res = memcmp(key.c_str(), m_key[i], NVM_KeySize);
         if (res <= 0) //找到插入点
         {
@@ -74,29 +75,19 @@ void BpNode::InsertIndex(string key, BpNode *_pointer)
 
 }
 
-// void BpNode::UpdateKey(string keyOld, string keyNew)
-// {
-//     for (int i = 0; i < m_currentSize; ++i)
-//     {
-//         if (m_key[i] == keyOld)
-//         {
-//             m_key[i] = keyNew;
-//             return;
-//         }
-//     }
-// }
-
-void BpNode::InsertAtIndex(string key, string value)
+void NVMBpNode::InsertAtIndex(string key, string value)
 {
-    int res = memcmp(key.c_str(), m_key[m_currentSize-1], NVM_KeySize);
+    int res = memcmp(key.c_str(), m_key[m_currentSize-1],NVM_KeySize);
+    bpStats.add_node_search();
+    //考虑Key值大于现在最大值
     if(res > 0)
     {
         SetKey(m_currentSize-1, key.c_str());
         m_pointer[m_currentSize-1]->Insert(key, value);
         if(m_pointer[m_currentSize-1]->IsNeedSplit())
         {
-            BpNode* left = nullptr;
-            BpNode* right = nullptr;
+            NVMBpNode* left = nullptr;
+            NVMBpNode* right = nullptr;
             m_pointer[m_currentSize-1]->Split(left, right);
 
             //取left的最大key和left指针插入到当前索引节点
@@ -107,14 +98,15 @@ void BpNode::InsertAtIndex(string key, string value)
     }
     for (int i = 0; i < m_currentSize; ++i)
     {
+        bpStats.add_node_search();
         int res = memcmp(key.c_str(), m_key[i], NVM_KeySize);
         if (res <= 0)
         {
             m_pointer[i]->Insert(key, value);
             if(m_pointer[i]->IsNeedSplit())
             {
-                BpNode* left = NULL;
-                BpNode* right = NULL;
+                NVMBpNode* left = nullptr;
+                NVMBpNode* right = nullptr;
                 m_pointer[i]->Split(left, right);
 
                 //取left的最大key和left指针插入到当前索引节点
@@ -127,7 +119,7 @@ void BpNode::InsertAtIndex(string key, string value)
     }
 }
 
-void BpNode::Insert(string key, string value) {
+void NVMBpNode::Insert(string key, string value) {
     if(IsLeafNode()) {
         InsertAtLeaf(key, value);
     } else {
@@ -135,7 +127,7 @@ void BpNode::Insert(string key, string value) {
     }
 }
 
-char * BpNode::Get(const std::string& key) {
+char *NVMBpNode::Get(const std::string& key) {
     for (int i = 0; i < m_currentSize; ++i)
     {
         int res = strncmp(key.c_str(), m_key[i], NVM_KeySize);
@@ -143,12 +135,9 @@ char * BpNode::Get(const std::string& key) {
         {
             if(IsLeafNode()) {
                 if(res == 0) {
-                    string tmp(m_key[i], NVM_KeyBuf);
-                    int len = tmp.length();
-                    int hot = stoi(tmp.substr(len-7, NVM_SignSize-1));
-                    hot++;
-                    tmp.replace(len-7, 7, to_string(hot));
-                    memcpy(m_key[i], tmp.c_str(), NVM_KeyBuf);
+                    if ((m_key[i][NVM_KeyBuf-3] - '0') < 79)
+                        m_key[i][NVM_KeyBuf-3]++;
+                    // m_key[i][NVM_KeyBuf-3]++;
                     return m_key[i] + NVM_KeySize;
                 }
                 else {
@@ -162,7 +151,7 @@ char * BpNode::Get(const std::string& key) {
     return nullptr;
 }
 
-char * BpNode::Geti(const std::string& key) {
+char *NVMBpNode::Set1(const std::string& key) {
     for (int i = 0; i < m_currentSize; ++i)
     {
         int res = strncmp(key.c_str(), m_key[i], NVM_KeySize);
@@ -170,13 +159,14 @@ char * BpNode::Geti(const std::string& key) {
         {
             if(IsLeafNode()) {
                 if(res == 0) {
-                    return m_key[i] + NVM_KeySize;
+                    m_key[i][NVM_KeyBuf-1] = '0';
+                    return nullptr;
                 }
                 else {
                     return nullptr;
                 }
             } else {
-                return m_pointer[i]->Geti(key);
+                return m_pointer[i]->Set1(key);
             }
         }
     }
@@ -184,32 +174,38 @@ char * BpNode::Geti(const std::string& key) {
 }
 
 
-BpNode *BpNode::FindLeafNode(const std::string key) {
+
+NVMBpNode *NVMBpNode::FindLeafNode(const std::string key) {
     if(IsLeafNode()) {
         return this;
     }
     for (int i = 0; i < m_currentSize; ++i)
     {
-        int res = memcmp(key.c_str(), m_key[i], NVM_KeySize);
+        bpStats.add_node_search();
+        int res = memcmp(key.c_str(), m_key[i],NVM_KeySize);
         if (res <= 0)
         {
             return m_pointer[i]->FindLeafNode(key);
         }
     }
-    return NULL;
+    return nullptr;
 }
 
-void BpNode::Split(BpNode* &_left, BpNode* &_right)
+void NVMBpNode::Split(NVMBpNode* &_left, NVMBpNode* &_right)
 {
-    assert(m_currentSize == DrNVMBp_NODE_CAPACITY);
+    assert(m_currentSize == NVMBp_NODE_CAPACITY);
+    bpStats.add_split_num();
     bool isLeaf = IsLeafNode();
-    BpNode* pNew = new  BpNode;
+    char* mem = BpNodeNVMAllocator_->Allocate(NVM_NodeSize);
+    NVMBpNode* pNew = new (mem) NVMBpNode;
+
     pNew->SetNodeType(GetNodeType());
     pNew->SetNext(nullptr);
     pNew->SetPrev(nullptr);
 
-    int leftCount = (int)ceil((DrNVMBp_M_WAY+1)/2.0);
+    int leftCount = (int)ceil((NVMBp_M_WAY+1)/2.0);
     int rightCount = m_currentSize - leftCount;
+    
     int index = 0;
     while(index < leftCount)
     {
@@ -221,17 +217,18 @@ void BpNode::Split(BpNode* &_left, BpNode* &_right)
         }
         index++;
     }
+
     while(index < m_currentSize)
     {
         SetKey(index-leftCount, m_key[index]);
         if(!isLeaf) {
-            m_pointer[index - leftCount] = m_pointer[index];
+            SetPointer(index-leftCount, m_pointer[index]);
         }
 		++index;
     }
+
     //更新m_currentSize值
-    // SetCurrentSize(rightCount);
-    m_currentSize = rightCount;
+    SetCurrentSize(rightCount);
     //更新双向链表指针
     if(isLeaf) {
 	    if(this->GetPrev() != nullptr)
@@ -242,11 +239,12 @@ void BpNode::Split(BpNode* &_left, BpNode* &_right)
         pNew->SetNext(this);
         this->SetPrev(pNew);
     }	
+
     _right = this;
     _left = pNew;
 }
 
-BpNode* BpNode::GetMinLeaveNode()
+NVMBpNode* NVMBpNode::GetMinLeaveNode()
 {
     if(IsLeafNode()) {
 	    return this; 
@@ -255,12 +253,12 @@ BpNode* BpNode::GetMinLeaveNode()
     }
 }
 
-bool BpNode::Search(string key, string &value, BpNode *&_valueNode)
+bool NVMBpNode::Search(string key, string &value, NVMBpNode *&_valueNode)
 {
     for (int i = 0; i < m_currentSize; ++i)
     {
-        DrbpStats.add_node_search();    
-        int res = memcmp(key.c_str(), m_key[i], NVM_KeySize);
+        bpStats.add_node_search();    
+        int res = memcmp(key.c_str(), m_key[i],NVM_KeySize);
         if (res == 0) 
         {
             // value = m_value[i];
@@ -269,7 +267,7 @@ bool BpNode::Search(string key, string &value, BpNode *&_valueNode)
 
             return true;
         }
-        else  if (key < m_key[i]) 
+        else if (res < 0)
         { //进入此逻辑，说明查无此KEY
             break;
         }
@@ -279,11 +277,12 @@ bool BpNode::Search(string key, string &value, BpNode *&_valueNode)
 }
 
 
-bool BpNode::Search(string key1, string key2, string* result, int& size)
+bool NVMBpNode::Search(string key1, string key2, string* result, int& size)
 {
     bool bFind = false;
     for (int i = 0; i < m_currentSize; ++i)
-    {  
+    {
+        bpStats.add_node_search();    
         int res1 = memcmp(key1.c_str(), m_key[i], NVM_KeySize);
         int res2 = memcmp(key2.c_str(), m_key[i], NVM_KeySize);
         if (res1 <= 0 && res2 >=0 )
@@ -302,64 +301,57 @@ bool BpNode::Search(string key1, string key2, string* result, int& size)
     return bFind;
 }
 
-// string BpNode::GetValue(char *valuepointer){
-//     uint64_t value_point;
-//     memcpy(&value_point, valuepointer, sizeof(uint64_t));
-//     char *value = (char *)value_point;
-//     return string(value, NVM_ValueSize); 
-// }
+string NVMBpNode::GetValue(char *valuepointer){
+    uint64_t value_point;
+    memcpy(&value_point, valuepointer, sizeof(uint64_t));
+    char *value = (char *)value_point;
+    return string(value, NVM_ValueSize); 
+}
 
-// bool BpNode::GetRange(const std::string key1, const std::string key2, std::vector<std::string> &values, int &findsize, int size) {
-//     bool bFinished = false;
-//     for (int i = 0; i < m_currentSize; ++i)
-//     {
-//         DrbpStats.add_node_search();    
-//         // int res1 = memcmp(key1.c_str(), m_key[i], NVM_KeySize);
-//         // if (res1 <= 0)
-//         if (key1 <= m_key[i]) 
-//         {
-//             if(key2.size() != 0 && memcmp(key2.c_str(), m_key[i], NVM_KeySize) < 0) {
-//                 return true;
-//             }
-//             values.push_back(GetValue(m_key[i] + NVM_KeySize));
-//             findsize ++;
-//             if(findsize >= size) {
-//                 return true;
-//             }
-//         }
-//     }
-//     return bFinished;
-// }
+bool NVMBpNode::GetRange(const std::string key1, const std::string key2, std::vector<std::string> &values, int &findsize, int size) {
+    bool bFinished = false;
+    for (int i = 0; i < m_currentSize; ++i)
+    {
+        bpStats.add_node_search();    
+        int res1 = memcmp(key1.c_str(), m_key[i], NVM_KeySize);
+        if (res1 <= 0)
+        {
+            if(key2.size() != 0 && memcmp(key2.c_str(), m_key[i], NVM_KeySize) < 0) {
+                return true;
+            }
+            values.push_back(GetValue(m_key[i] + NVM_KeySize));
+            findsize ++;
+            if(findsize >= size) {
+                return true;
+            }
+        }
+    }
+    return bFinished;
+}
 
-void BpNode::deleteIndex(int i) {
+void NVMBpNode::deleteIndex(int i) {
     bool isLeaf = IsLeafNode();
     for(; i < m_currentSize - 1; i ++ ) {
         SetKey(i, m_key[i + 1]);
-        // m_key[i] = m_key[i+1];
         if(!isLeaf) {
             SetPointer(i, m_pointer[i + 1]);
-            // m_pointer[i] = m_pointer[i+1];
         }
     }
     SetCurrentSize(m_currentSize - 1);
-    // m_currentSize--;
 }
 
-void BpNode::borrowNext(BpNode *next) {
+void NVMBpNode::borrowNext(NVMBpNode *next) {
     bool isLeaf = IsLeafNode();
     SetKey(m_currentSize, next->GetKey(0));
-    // m_key[m_currentSize] = next->m_key[0];
     if(!isLeaf) {
         SetPointer(m_currentSize, next->GetPointer(0));
-        // m_pointer[m_currentSize] = next->m_pointer[0];
     }
-    // SetCurrentSize(m_currentSize + 1);
-    m_currentSize++;
+    SetCurrentSize(m_currentSize + 1);
     next->deleteIndex(0);
 
 }
 
-void BpNode::borrowPrev(BpNode *prev) {
+void NVMBpNode::borrowPrev(NVMBpNode *prev) {
     bool isLeaf = IsLeafNode();
     string left_key(prev->GetMaxKey(), NVM_KeyBuf);
     if(isLeaf) {
@@ -374,57 +366,50 @@ void BpNode::borrowPrev(BpNode *prev) {
 
 }
 
-void BpNode::mergeNext(BpNode *next) {
+void NVMBpNode::mergeNext(NVMBpNode *next) {
     bool isLeaf = IsLeafNode();
-    assert(m_currentSize  + next->GetSize() < DrNVMBp_NODE_CAPACITY);
+    assert(m_currentSize  + next->GetSize() < NVMBp_NODE_CAPACITY);
     for(int i = 0; i < next->GetSize(); i ++) {
         SetKey(m_currentSize + i, next->GetKey(i));
-        // m_key[m_currentSize+1] = next->m_key[0];
         if(!isLeaf) {
             SetPointer(m_currentSize + i, next->GetPointer(i));
-            // m_pointer[m_currentSize+1] = next->m_pointer[i];
-
         }
     }
-    // SetCurrentSize(m_currentSize + next->GetSize());
-    m_currentSize = m_currentSize + next->GetSize();
+    SetCurrentSize(m_currentSize + next->GetSize());
 }
 
-void BpNode::nodeDelete() {
+void NVMBpNode::nodeDelete() {
     if(IsLeafNode()) {
-        if(this->GetPrev() != NULL)
+        if(this->GetPrev() != nullptr)
         {
             this->GetPrev()->SetNext(this->GetNext());
         }
 
-        if(this->GetNext() != NULL)	 {
+        if(this->GetNext() != nullptr)	 {
             this->GetNext()->SetPrev(this->GetPrev());
         }
     }
 }
 
-bool BpNode::DeleteAtLeaf(string key)
+bool NVMBpNode::DeleteAtLeaf(string key)
 {
     for (int i = 0; i < m_currentSize; ++i)
     {
-        DrbpStats.add_node_search();    
+        bpStats.add_node_search();    
         int res = memcmp(key.c_str(), m_key[i], NVM_KeySize);
         if (res == 0)//找到待删除元素
-        // if (key == m_key[i]) 
         {
             //后续所有节点前移一个下标,对应指针同步操作
             for (int j = i; j < m_currentSize - 1; ++j)
             {
                 SetKey(j, m_key[j+1]);
-                // m_key[j] = m_key[j+1];
             }
             // m_currentSize--;
-            // SetCurrentSize(m_currentSize - 1);
-            m_currentSize--;
+            SetCurrentSize(m_currentSize - 1);
 
             return true;
         }
-        else if (res < 0) 
+        else if (res < 0)
         { //进入此逻辑，说明查无此KEY
             break;
         }
@@ -433,21 +418,20 @@ bool BpNode::DeleteAtLeaf(string key)
     return false;
 }
 
-void BpNode::printKey() {
+void NVMBpNode::printKey() {
     for(int i = 0; i < m_currentSize; i++) {
         printf("%d %s;", i, m_key[i]);
     }
     printf("\n");
 }
 
-bool BpNode::DeleteAtIndex(string key) {
+bool NVMBpNode::DeleteAtIndex(string key) {
     bool deleted = false;
     for (int i = 0; i < m_currentSize; ++i)
     {
-        DrbpStats.add_node_search();    
+        bpStats.add_node_search();    
         int res = memcmp(key.c_str(), m_key[i], NVM_KeySize);
         if (res <= 0)
-        // if (key <= m_key[i]) 
         {
             deleted = m_pointer[i]->Delete(key);
             if (m_pointer[i]->IsNeedRecoveryStructure())
@@ -482,8 +466,8 @@ bool BpNode::DeleteAtIndex(string key) {
                 }
 
             }
-            DrbpStats.add_node_search();    
-            if(m_key[i] != m_pointer[i]->GetMaxKey()) {
+            bpStats.add_node_search();    
+            if(memcmp(m_key[i], m_pointer[i]->GetMaxKey(), NVM_KeySize) != 0) {
                 SetKey(i, m_pointer[i]->GetMaxKey());
             }
 
@@ -495,40 +479,40 @@ bool BpNode::DeleteAtIndex(string key) {
 
 }
 
-// void BpNode::CheckLeafNode(char *key_param) {
-//     if(!IsLeafNode()){
-//         printf("Is not a leaf node.\n");
-//     }
-//     string key = string(key_param);
-//     for(int i = 0; i < m_currentSize; i ++) {
-//         if(key != NULL && key > m_key[i]) {
-//             printf("Check Node faild.\n");
-//         } 
-//         key = m_key[i];
-//     }
-//     if(GetNext() != NULL) {
-//         GetNext()->CheckLeafNode(key);
-//     }
-// }
+void NVMBpNode::CheckLeafNode(char *key_param) {
+    if(!IsLeafNode()){
+        printf("Is not a leaf node.\n");
+    }
+    char *key = key_param;
+    for(int i = 0; i < m_currentSize; i ++) {
+        if(key != nullptr && memcmp(key, m_key[i], NVM_KeySize) > 0) {
+            printf("Check Node faild.\n");
+        } 
+        key = m_key[i];
+    }
+    if(GetNext() != nullptr) {
+        GetNext()->CheckLeafNode(key);
+    }
+}
 
-// void BpNode::CheckNodeSequence(char *key_param) {
-//     bool isLeaf = IsLeafNode();
-//     string key = string(key_param);
-//     for(int i = 0; i < m_currentSize; i ++) {
-//         if(isLeaf) {
-//             GetPointer(i)->CheckNodeSequence(key);
-//         }
-//         if(key != NULL && key > m_key[i]) {
-//             printf("Check Node faild.\n");
-//         } 
-//         // else if(key == NULL){
-//         //     printf("A null pointer check.\n");
-//         // }
-//         key = m_key[i];
-//     }
-// }
+void NVMBpNode::CheckNodeSequence(char *key_param) {
+    bool isLeaf = IsLeafNode();
+    char *key = key_param;
+    for(int i = 0; i < m_currentSize; i ++) {
+        if(isLeaf) {
+            GetPointer(i)->CheckNodeSequence(key);
+        }
+        if(key != nullptr && memcmp(key, m_key[i], NVM_KeySize) > 0) {
+            printf("Check Node faild.\n");
+        } 
+        // else if(key == nullptr){
+        //     printf("A null pointer check.\n");
+        // }
+        key = m_key[i];
+    }
+}
 
-bool BpNode::Delete(string key) {
+bool NVMBpNode::Delete(string key) {
     if(IsLeafNode()) {
         return DeleteAtLeaf(key);
     } else {
@@ -536,89 +520,86 @@ bool BpNode::Delete(string key) {
     }
 }
 
-void BpNode::Print(){
+void NVMBpNode::Print(){
     bool isLeaf = IsLeafNode();
-    DrBpTreeLevel_ ++;
+    BpTreeLevel_ ++;
     for(int i = 0 ; i < m_currentSize ; i++)
     {
         if(!isLeaf) {
             m_pointer[i]->Print();
         }
         uint64_t value_point;
-        // memcpy(&value_point, m_key[i] + NVM_KeySize, sizeof(uint64_t));
-        printf("%08d %s %llx %d\n", DrBpPrintCount_ ++, m_key[i], value_point, DrBpTreeLevel_);
+        memcpy(&value_point, m_key[i] + NVM_KeySize, sizeof(uint64_t));
+        printf("%08d %s %llx %d\n", BpPrintCount_ ++, m_key[i], value_point, BpTreeLevel_);
     }
-    DrBpTreeLevel_ --;
+    BpTreeLevel_ --;
 }
 
 //****************************************/
 //*B+树结构实现
 //****************************************/
-BpTree::BpTree()
+NVMBpTree::NVMBpTree()
 {
-    m_root = NULL;
-    HCrchain = new RangChain;
+    m_root = nullptr;
+    HCrchain = new NVMRangChain;
 }
 
-BpTree::~BpTree()
+NVMBpTree::~NVMBpTree()
 {
-    delete m_root;
-    m_first = NULL;
-    delete HCrchain;
+    m_first = nullptr;
+    HCrchain = NULL;
 }
 
-void BpTree::Initialize(PersistentAllocator* valueAllocator) {
-    // BpNodeNVMAllocator_ = allocator;
-    DrBpValueNVMAllocator_ = valueAllocator;
-}
-
-void BpTree::InsertChain(string key)
+void NVMBpTree::CreateChain()
 {
-    HCrchain->insert(key);
+    NVMBpNode* p = m_first;
+    HCrchain->makeEmpty();
+    if(p==NULL){
+        cout << "NULL!" << endl;
+        return;
+    }
+    HCrchain->initialize(MinHot(), MaxHot()+1);
+    while(p!=NULL){
+        HCrchain->insert(*p, p->GetHot());
+        p=p->GetNext();
+    }
+    // HCrchain->traver();
 }
 
-void BpTree::Insert(string key, string value, int cache)
+
+void NVMBpTree::Initialize(PersistentAllocator* allocator, PersistentAllocator* valueAllocator) {
+    BpNodeNVMAllocator_ = allocator;
+    BpValueNVMAllocator_ = valueAllocator;
+}
+
+void NVMBpTree::Insert(string key, string value)
 {
     uint64_t vpoint;
     char keybuf[NVM_KeyBuf + 1];
-    char *pvalue = DrBpValueNVMAllocator_->Allocate(value.size());
+    char *pvalue = BpValueNVMAllocator_->Allocate(value.size());
     vpoint = (uint64_t)pvalue;
-    
-    if (!cache){
-        char sign[NVM_SignSize + 1];
-        pmem_memcpy_persist(pvalue, value.c_str(), value.size());
-        memcpy(keybuf, key.c_str(), key.size());
-        memcpy(keybuf + NVM_KeySize, &vpoint, NVM_PointSize);
-        snprintf(sign, sizeof(sign), "%07d", 1000000);
-        string signdata(sign, NVM_SignSize);
-        memcpy(keybuf + NVM_KeySize + NVM_PointSize, signdata.c_str(), NVM_SignSize);
-        // string tmp_key(keybuf, NVM_KeyBuf);
-    }else{
-        memcpy(keybuf, key.c_str(), key.size());
-        pmem_memcpy_persist(pvalue, value.c_str(), value.size());
-        memcpy(keybuf + NVM_KeySize, &vpoint, NVM_PointSize);
-        // string tmp_key(keybuf, NVM_KeyBuf);
-        // cout << "tmp_key: " << tmp_key << endl;
-    }
+    pmem_memcpy_persist(pvalue, value.c_str(), value.size());
+    memcpy(keybuf, key.c_str(), key.size());
+    memcpy(keybuf + NVM_KeySize, &vpoint, NVM_PointSize);
     
     string tmp_key(keybuf, NVM_KeyBuf);
+    // cout << "key tmp_key:" << tmp_key << endl;
+    // cout << "key last:" << tmp_key[NVM_KeyBuf-1] << endl;
+    // bpStats.add_tree_level(treeLevel);
 
-    // if(cache)
-    //     cout << "cache:" << cache << " tmp_key: " << tmp_key << endl;
-    // InsertChain(tmp_key);
 
     if(m_root == nullptr)
     {
-        // assert(sizeof(BpNode) <= NVM_NodeSize);
+        assert(sizeof(NVMBpNode) <= NVM_NodeSize);
         // printf("%s:Call\n", __FUNCTION__);
         treeLevel = 1;
-        // char* mem = BpNodeNVMAllocator_->Allocate(NVM_NodeSize);
-		m_root = new BpNode();
-        // m_root->SetNodeType(DrBpLeafType);
-        m_root->nodeType = DrBpLeafType;
+        char* mem = BpNodeNVMAllocator_->Allocate(NVM_NodeSize);
+		m_root = new (mem) NVMBpNode();
+        m_root->SetNodeType(BpLeafType);
         m_root->Insert(tmp_key, value);
         m_root->SetNext(nullptr);
         m_root->SetPrev(nullptr);
+        // printf("%s:Call\n", __FUNCTION__);
     }
     else
     {
@@ -626,20 +607,19 @@ void BpTree::Insert(string key, string value, int cache)
     }
     if(m_root->IsNeedSplit())
     {
-        BpNode *left = nullptr;
-        BpNode *right = nullptr;
+        NVMBpNode *left = nullptr;
+        NVMBpNode *right = nullptr;
         treeLevel ++;
 		m_root->Split(left, right);
         // printf("m_root split over!\n");
-        // char* mem = BpNodeNVMAllocator_->Allocate(NVM_NodeSize);
-        BpNode* pNewRoot = new  BpNode;
-        pNewRoot->nodeType = DrBpIndexType;
+        char* mem = BpNodeNVMAllocator_->Allocate(NVM_NodeSize);
+        NVMBpNode* pNewRoot = new (mem) NVMBpNode;
+        pNewRoot->SetNodeType(BpIndexType);
         m_root = left;
-
         string left_key(left->GetMaxKey(),NVM_KeyBuf);
         string right_key(right->GetMaxKey(),NVM_KeyBuf);
         pNewRoot->InsertIndex(left_key, left);
-        
+        m_root = pNewRoot;
         pNewRoot->InsertIndex(right_key, right);
         //更新根节点指针
         m_root = pNewRoot; 
@@ -648,10 +628,12 @@ void BpTree::Insert(string key, string value, int cache)
 	m_first = m_root->GetMinLeaveNode();
 }
 
-void BpTree::Delete(string key)
+void NVMBpTree::Delete(string key)
 {
-    if(m_root == NULL) {
+    if(m_root == nullptr) {
         printf("B+ tree is empty\n");
+        bpStats.end();
+        bpStats.add_delete();
         return ;
     }
     if((m_root->Delete(key)) == true){
@@ -660,20 +642,21 @@ void BpTree::Delete(string key)
             treeLevel --;
             m_root = m_root->GetPointer(0);
         }
-    }else 
-        // printf("[DEBUG] Delet key.(%s) faild\n", key.c_str());
+    }
+    // printf("Delet key.(%s) faild\n", key.c_str());
     return ;   
 }
-string BpTree::Get(const std::string& key) {
+
+
+
+string NVMBpTree::Get(const std::string& key) {
     char *pvalue;
     if(m_root == nullptr) {
         printf("B+ tree is empty\n");
         return "";
     }
-    // cout << "[DEBUG] Get 1! " << endl;
 
     if((pvalue = m_root->Get(key)) != nullptr){
-        // HCrchain->update_hot(key);
         uint64_t value_point;
         memcpy(&value_point, pvalue, sizeof(uint64_t));
         char *value = (char *)value_point;
@@ -683,45 +666,27 @@ string BpTree::Get(const std::string& key) {
     return "";
 }
 
-string BpTree::Geti(const std::string& key) {
-    char *pvalue;
-    if(m_root == nullptr) {
-        printf("B+ tree is empty\n");
-        return "";
-    }
-    // cout << "[DEBUG] Get 1! " << endl;
-
-    if((pvalue = m_root->Geti(key)) != nullptr){
-        uint64_t value_point;
-        memcpy(&value_point, pvalue, sizeof(uint64_t));
-        char *value = (char *)value_point;
-        // printf("Value pointer is %p\n", value);
-        return string(value, NVM_ValueSize);
-    }
-    return "";
-}
-
-bool BpTree::Search(string key, string& value)
+bool NVMBpTree::Search(string key, string& value)
 {
-	if(m_root == NULL)
+	if(m_root == nullptr)
 	{
 		return false;
 	}
 
-	BpNode* resultNode = NULL;
+	NVMBpNode* resultNode = nullptr;
 	return m_root->Search(key, value, resultNode);
 }
 
-bool BpTree::Search(string key1, string key2, string* result, int& size)
+bool NVMBpTree::Search(string key1, string key2, string* result, int& size)
 {
-	if(m_root == NULL || m_first == NULL)
+	if(m_root == nullptr || m_first == nullptr)
 	{
 		return false;
 	}
 
-	BpNode* p = m_first;
+	NVMBpNode* p = m_first;
         
-	while(p != NULL)
+	while(p != nullptr)
 	{
         p->Search(key1, key2, result, size);
 
@@ -736,78 +701,28 @@ bool BpTree::Search(string key1, string key2, string* result, int& size)
     return true;
 }
 
-// void BpTree::GetRange(const std::string key1, const std::string key2, std::vector<std::string> &values, int &size) {
-//     int findsize = 0;
-//     BpNode* p = NULL;
-//     if(m_root != NULL){
-//         p = m_root->FindLeafNode(key1);
-//     }
-//     while(p != NULL) {
-//         if(p->GetRange(key1, key2, values, findsize, size)) {
-//             break;
-//         }
-//         p = p->GetNext();
-//     }
-//     size = findsize;
-// }
-vector<string> BpTree::OutdeData(size_t out){
-    vector<string> dlist;
-    // cout << "size: " << HCrchain->currentSize << endl;
-    // HCrchain->traver();
-    for(int i = 0; i < HCrchain->theLists.size(); i++)
-    {
-        typename list<string>::iterator itr = HCrchain->theLists[i].begin();
-        while(itr != HCrchain->theLists[i].end()){
-            // cout << HCrchain->theLists[i].size() << ": " << (*itr)[(*itr).length()-8] << ": " << HCrchain->theLists[i].max_size()  << endl;
-            if((*itr)[(*itr).length()-8]== '0'){
-                // cout << "get !" << endl;
-                dlist.push_back((*itr));
-                if (dlist.size() >= out)
-                    return dlist;
-            }
-            itr++;
-        }
+void NVMBpTree::GetRange(const std::string key1, const std::string key2, std::vector<std::string> &values, int &size) {
+    int findsize = 0;
+    NVMBpNode* p = nullptr;
+    if(m_root != nullptr){
+        p = m_root->FindLeafNode(key1);
     }
-    return dlist;
+    while(p != nullptr) {
+        if(p->GetRange(key1, key2, values, findsize, size)) {
+            break;
+        }
+        p = p->GetNext();
+    }
+    size = findsize;
 }
 
-vector<string> BpTree::FlushtoNvm()
-{
-    vector<string> dlist;
-    HCrchain->makeEmpty();
-    BpNode* p = m_first;
-    while(p!=NULL){
-        for(int i=0;i<p->GetSize();i++){
-            if(p->GetKey(i)[NVM_KeyBuf-8]== '1'){
-                dlist.push_back(string(p->GetKey(i), NVM_KeyBuf));
-                // HCrchain->update_insert(string(p->GetKey(i), NVM_KeyBuf));
-                p->GetKey(i)[NVM_KeyBuf-8]= '0';
-                InsertChain(string(p->GetKey(i), NVM_KeyBuf));
-            }
-            
-        }
-        p=p->GetNext();
-    }
-    return dlist;
-}
-
-// void BpTree::CreateChain()
-// {
-//     BpNode* p = m_root->GetMinLeaveNode();
-//     HCrchain->makeEmpty();
-//     HCrchain->initialize(MinHot(), MaxHot()+1);
-//     while(p!=NULL){
-//         HCrchain->insert(*p, p->GetHot());
-//         p=p->GetNext();
-//     }
-//     // HCrchain->traver();
-// }
-
-void BpTree::Print(){
+void NVMBpTree::Print(){
+    BpPrintCount_ = 0;
+    BpTreeLevel_ = 0;
     if(m_root != nullptr) {
         printf("Print whole tree\n");
         // m_root->Print();
-        BpNode* p = m_root->GetMinLeaveNode();
+        NVMBpNode* p = m_root->GetMinLeaveNode();
         while(p != nullptr)
 	    {
             p->printKey();
@@ -816,19 +731,54 @@ void BpTree::Print(){
     }
 }
 
-
-void BpTree::PrintStatistic() {
-    DrbpStats.print_latency();
-    DrbpStats.clear_period();
+void NVMBpTree::PrintStatistic() {
+    bpStats.print_latency();
+    bpStats.clear_period();
 }
 
-void BpTree::PrintInfo() {
+void NVMBpTree::PrintInfo() {
     printf("This is a B+ tree\n");
-    printf("NVMB_M_WAY = %d\n", DrNVMBp_M_WAY);
+    printf("NVMB_M_WAY = %d\n", NVMBp_M_WAY);
     printf("Tree Level = %d\n", treeLevel);
-    printf("NvmNode size = %d\n", sizeof(BpNode));
-    printf("B+ tree Node size = %d\n", sizeof(BpNode));
-    assert(sizeof(BpNode) <= NVM_NodeSize);
+    printf("NvmNode size = %d\n", sizeof(NVMBpNode));
+    printf("B+ tree Node size = %d\n", sizeof(NVMBpNode));
+    assert(sizeof(NVMBpNode) <= NVM_NodeSize);
+}
+
+
+
+
+vector<string> NVMBpTree::BacktoDram(int hot, size_t read)
+{
+    vector<string> dlist;
+    for(int i = HCrchain->theLists.size()-1; i >= 0; i--)
+    {
+        typename list<NVMBpNode>::iterator itr = HCrchain->theLists[i].begin();
+        while(itr != HCrchain->theLists[i].end()){
+            if((*itr).GetHot() < hot){
+                return dlist;
+            }
+            for(int j=0;j<(*itr).GetSize();j++){
+                if((*itr).GetKey(j)[NVM_KeyBuf-1]== '0'){
+                    dlist.push_back(string((*itr).GetKey(j), NVM_KeyBuf));
+                    (*itr).GetKey(j)[NVM_KeyBuf-1]= '1';
+                    if (dlist.size() >= read)
+                        return dlist;
+                }
+            }
+            itr++;
+        }
+    }
+    return dlist;
+}
+
+void NVMBpTree::Updakey(const std::string& key){
+    if(m_root == nullptr) {
+        printf("B+ tree is empty\n");
+        return;
+    }
+
+    m_root->Set1(key);
 }
 
 
