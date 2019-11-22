@@ -240,7 +240,7 @@ int main( const int argc, const char *argv[]) {
 }
 
 string ParseCommandLine(int argc, const char *argv[], utils::Properties &props) {
-  int argindex = 1;
+  int argindex = 3;
   string filename;
   while (argindex < argc && StrStartWith(argv[argindex], "-")) {
     if (strcmp(argv[argindex], "-threads") == 0) {
