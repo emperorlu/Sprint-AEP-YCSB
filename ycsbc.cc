@@ -65,6 +65,7 @@ int DelegateClient(ycsbc::DB *db, ycsbc::CoreWorkload *wl, const int num_ops,
 int main( const int argc, const char *argv[]) {
   int to_cache = atoi(argv[1]);
   int num_size = atoi(argv[2]);
+  cout << "[Debug]"  << to_cache << endl;
   // int is_sleep = atoi(argv[3]);
 
   utils::Properties props;
