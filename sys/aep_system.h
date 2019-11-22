@@ -11,7 +11,7 @@
 #include <mutex>
 #include "nvm_common2.h"
 #include "test_common.h"
-#include "random.h"
+// #include "random.h"
 // #include "persistent_BPlusTree_Wrapper.h"
 // #include "drnvm_BPlusTree_Wrapper.h"
 #include "statistic.h"
