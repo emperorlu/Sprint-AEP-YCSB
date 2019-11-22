@@ -9,13 +9,13 @@ using namespace rocksdb;
 
 
 namespace ycsbc {
-    AepSystem::AepSystem(const char *dbfilename, utils::Properties &props) :noResult(0){
+    AepSystem::AepSystem(const char *dbfilename, utils::Properties &props, int to_cache, int num_size) :noResult(0){
     
         //set option
         SetOptions(props);
         // aepsystem::AllocatorInit();
         
-        db_ = new rocksdb::aepsystem();
+        db_ = new rocksdb::aepsystem(to_cache, num_size);
         if(!db_) {
             printf("creat AepSystem error\n");
             // AllocatorExit();

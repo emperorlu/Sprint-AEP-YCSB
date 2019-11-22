@@ -45,6 +45,7 @@ namespace rocksdb{
     class aepsystem{
  public:
     aepsystem();
+    aepsystem(int cache, int size) :is_cache(cache), num_size(size){}
     ~aepsystem();
 
     void Initialize();
@@ -59,7 +60,7 @@ namespace rocksdb{
 
    int is_cache;
    int num_size;
-   int cache_size;
+   // int cache_size;
     
  private:
     size_t KEY_SIZE = rocksdb::NVM_KeySize;         

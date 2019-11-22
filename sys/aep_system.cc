@@ -460,8 +460,8 @@ aepsystem::~aepsystem(){
 
 void aepsystem::Initialize()
 {
-    
-    OUT_SIZE = 10000000 * 0.6;
+    int numSize = 1000000 * num_size;
+    OUT_SIZE =  numSize * 0.6;
     FLUSH_SIZE = OUT_SIZE / 6;
     OUT_DATA = OUT_SIZE / 60;
     READ_DATA = OUT_DATA / 100;

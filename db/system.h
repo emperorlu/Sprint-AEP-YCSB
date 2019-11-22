@@ -19,7 +19,7 @@ using namespace rocksdb;
 namespace ycsbc {
     class AepSystem : public DB{
     public:
-        AepSystem(const char *dbfilename, utils::Properties &props);
+        AepSystem(const char *dbfilename, utils::Properties &props, int to_cache, int num_size);
         int Read(const std::string &table, const std::string &key,
                  const std::vector<std::string> *fields,
                  std::vector<KVPair> &result);

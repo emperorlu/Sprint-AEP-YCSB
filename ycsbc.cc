@@ -63,11 +63,15 @@ int DelegateClient(ycsbc::DB *db, ycsbc::CoreWorkload *wl, const int num_ops,
 }
 
 int main( const int argc, const char *argv[]) {
+  int to_cache = atoi(argv[1]);
+  int num_size = atoi(argv[2]);
+  // int is_sleep = atoi(argv[3]);
+
   utils::Properties props;
   Init(props);
   string file_name = ParseCommandLine(argc, argv, props);
 
-  ycsbc::DB *db = ycsbc::DBFactory::CreateDB(props);
+  ycsbc::DB *db = ycsbc::DBFactory::CreateDB(props, to_cache, num_size);
   if (!db) {
     cout << "Unknown database name " << props["dbname"] << endl;
     exit(0);
