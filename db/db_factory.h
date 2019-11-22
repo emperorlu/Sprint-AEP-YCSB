@@ -18,7 +18,7 @@ namespace ycsbc {
 
 class DBFactory {
  public:
-  static DB* CreateDB(utils::Properties &props);
+  static DB* CreateDB(utils::Properties &props, int to_cache, int num_size);
 };
 
 } // ycsbc
