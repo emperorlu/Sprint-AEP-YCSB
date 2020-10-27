@@ -1,1 +1,2 @@
-# Aep_YCSB
+# Sprint-AEP-YCSB
+The YCSB benchmark for Sprint-AEP.
